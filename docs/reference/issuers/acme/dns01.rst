@@ -125,4 +125,23 @@ Akamai FastDNS
         name: akamai-dns
         key: accessToken
 
+Generic RFC2136
+===============
+
+.. code-block:: yaml
+
+    rfc2136:
+      # Nameserver to send DDNS Updates
+      nameserver: 192.168.0.1
+      # tsig key
+      tsigKey: tsig-key
+      # A kubernetes SecretRef to the TSIG Secret
+      tsigSecretSecretRef:
+        name: tsig-secret
+        key: secret
+      # This field is optional for overriding the tsig algorithm (default HmacMD5)
+      TSIGAlgorithm: HmacMD5
+      # this field is optional for overriding the default timeout in seconds
+      timeout: 60
+
 .. _`Let's Encrypt`: https://letsencrypt.org

@@ -155,6 +155,7 @@ type ACMEIssuerDNS01Provider struct {
 	Cloudflare *ACMEIssuerDNS01ProviderCloudflare `json:"cloudflare,omitempty"`
 	Route53    *ACMEIssuerDNS01ProviderRoute53    `json:"route53,omitempty"`
 	AzureDNS   *ACMEIssuerDNS01ProviderAzureDNS   `json:"azuredns,omitempty"`
+	RFC2136    *ACMEIssuerDNS01ProviderRFC2136    `json:"rfc2136,omitempty"`
 }
 
 // ACMEIssuerDNS01ProviderAkamai is a structure containing the DNS
@@ -200,6 +201,26 @@ type ACMEIssuerDNS01ProviderAzureDNS struct {
 
 	// + optional
 	HostedZoneName string `json:"hostedZoneName"`
+}
+
+// TSGIG HMAC hashing codes
+type TSIGAlgorithm string
+
+const (
+	HmacMD5    TSIGAlgorithm = "HmacMD5"
+	HmacSHA1   TSIGAlgorithm = "HmacSHA1"
+	HmacSHA256 TSIGAlgorithm = "HmacSHA256"
+	HmacSHA512 TSIGAlgorithm = "HmacSHA512"
+)
+
+// ACMEIssuerDNS01ProviderRFC2136 is a structure containing the DNS
+// configuration for RFC2136
+type ACMEIssuerDNS01ProviderRFC2136 struct {
+	Nameserver    string            `json:"nameserver"`
+	TSIGSecret    SecretKeySelector `json:"tsigSecretSecretRef"`
+	TSIGKey       string            `json:"tsigKey"`
+	TSIGAlgorithm TSIGAlgorithm     `json:"tsigAlgorithm"`
+	Timeout       string            `json:"timeout"`
 }
 
 // IssuerStatus contains status information about an Issuer

@@ -18,6 +18,7 @@ import (
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/azuredns"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/clouddns"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/cloudflare"
+	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/rfc2136"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/route53"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/util"
 )
@@ -238,6 +239,30 @@ func (s *Solver) solverForIssuerProvider(providerName string) (solver, error) {
 			providerConfig.AzureDNS.ResourceGroupName,
 			providerConfig.AzureDNS.HostedZoneName,
 		)
+	case providerConfig.RFC2136 != nil:
+		var secret string
+		if len(providerConfig.RFC2136.TSIGSecret.Name) > 0 {
+			tsigSecret, err := s.secretLister.Secrets(s.resourceNamespace).Get(providerConfig.RFC2136.TSIGSecret.Name)
+			if err != nil {
+				return nil, fmt.Errorf("error getting rfc2136 service account: %s", err.Error())
+			}
+			secretBytes, ok := tsigSecret.Data[providerConfig.RFC2136.TSIGSecret.Key]
+			if !ok {
+				return nil, fmt.Errorf("error getting rfc2136 secret key: key '%s' not found in secret", providerConfig.RFC2136.TSIGSecret.Key)
+			}
+			secret = string(secretBytes)
+		}
+
+		impl, err = rfc2136.NewDNSProviderCredentials(
+			providerConfig.RFC2136.Nameserver,
+			string(providerConfig.RFC2136.TSIGAlgorithm),
+			providerConfig.RFC2136.TSIGKey,
+			secret,
+			providerConfig.RFC2136.Timeout,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error instantiating rfc2136 challenge solver: %s", err.Error())
+		}
 	default:
 		return nil, fmt.Errorf("no dns provider config specified for provider %q", providerName)
 	}
