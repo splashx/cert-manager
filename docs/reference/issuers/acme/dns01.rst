@@ -141,7 +141,5 @@ Generic RFC2136
         key: secret
       # This field is optional for overriding the tsig algorithm (default HmacMD5)
       TSIGAlgorithm: HmacMD5
-      # this field is optional for overriding the default timeout in seconds
-      timeout: 60
 
 .. _`Let's Encrypt`: https://letsencrypt.org

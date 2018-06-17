@@ -18,7 +18,7 @@ var (
 	rfc2136TestValue      = "Now36o-3BmlB623-0c1qCIUmgWVVmDJb88KGl24pqpo"
 	rfc2136TestFqdn       = "_acme-challenge.123456789.www.example.com."
 	rfc2136TestZone       = "example.com."
-	rfc2136TestTTL        = 60
+	//rfc2136TestTTL        = 60
 	rfc2136TestTsigKey    = "example.com."
 	rfc2136TestTsigSecret = "IwBTJx9wrDp4Y1RyC3H0gA=="
 )
@@ -58,7 +58,7 @@ func TestRFC2136ServerSuccess(t *testing.T) {
 	}
 	defer server.Shutdown()
 
-	provider, err := NewDNSProviderCredentials(addrstr, "", "", "", "")
+	provider, err := NewDNSProviderCredentials(addrstr, "", "", "")
 	if err != nil {
 		t.Fatalf("Expected NewDNSProviderCredentials() to return no error but the error was -> %v", err)
 	}
@@ -77,7 +77,7 @@ func TestRFC2136ServerError(t *testing.T) {
 	}
 	defer server.Shutdown()
 
-	provider, err := NewDNSProviderCredentials(addrstr, "", "", "", "")
+	provider, err := NewDNSProviderCredentials(addrstr, "", "", "")
 	if err != nil {
 		t.Fatalf("Expected NewDNSProviderCredentials() to return no error but the error was -> %v", err)
 	}
@@ -98,7 +98,7 @@ func TestRFC2136TsigClient(t *testing.T) {
 	}
 	defer server.Shutdown()
 
-	provider, err := NewDNSProviderCredentials(addrstr, "", rfc2136TestTsigKey, rfc2136TestTsigSecret, "")
+	provider, err := NewDNSProviderCredentials(addrstr, "", rfc2136TestTsigKey, rfc2136TestTsigSecret)
 	if err != nil {
 		t.Fatalf("Expected NewDNSProviderCredentials() to return no error but the error was -> %v", err)
 	}
@@ -129,7 +129,7 @@ func TestRFC2136ValidUpdatePacket(t *testing.T) {
 		t.Fatalf("Error packing expect msg: %v", err)
 	}
 
-	provider, err := NewDNSProviderCredentials(addrstr, "", "", "", "")
+	provider, err := NewDNSProviderCredentials(addrstr, "", "", "")
 	if err != nil {
 		t.Fatalf("Expected NewDNSProviderCredentials() to return no error but the error was -> %v", err)
 	}
