@@ -81,7 +81,7 @@ func NewDNSProviderCredentials(nameserver, tsigAlgorithm, tsigKey, tsigSecret st
 	// 	} else {
 	// 		d.timeout = t
 	// 	}
-	}
+	// }
 
 	return d, nil
 }
