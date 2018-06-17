@@ -220,7 +220,8 @@ type ACMEIssuerDNS01ProviderRFC2136 struct {
 	TSIGSecret    SecretKeySelector `json:"tsigSecretSecretRef"`
 	TSIGKey       string            `json:"tsigKey"`
 	TSIGAlgorithm TSIGAlgorithm     `json:"tsigAlgorithm"`
-	Timeout       string            `json:"timeout"`
+// Leave out timeout as per request. Effectively defaults to 60s (harcoded)
+//	Timeout       string            `json:"timeout"`
 }
 
 // IssuerStatus contains status information about an Issuer
