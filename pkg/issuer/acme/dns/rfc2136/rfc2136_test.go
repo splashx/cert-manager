@@ -18,8 +18,8 @@ var (
 	rfc2136TestValue      = "Now36o-3BmlB623-0c1qCIUmgWVVmDJb88KGl24pqpo"
 	rfc2136TestFqdn       = "_acme-challenge.123456789.www.example.com."
 	rfc2136TestZone       = "example.com."
-	//rfc2136TestTTL        = 60
 	rfc2136TestTsigKey    = "example.com."
+	rfc2136TestTTL        = 60
 	rfc2136TestTsigSecret = "IwBTJx9wrDp4Y1RyC3H0gA=="
 )
 

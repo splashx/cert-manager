@@ -207,7 +207,6 @@ func (in *ACMEIssuerDNS01Provider) DeepCopyInto(out *ACMEIssuerDNS01Provider) {
 			**out = **in
 		}
 	}
-
 	if in.AzureDNS != nil {
 		in, out := &in.AzureDNS, &out.AzureDNS
 		if *in == nil {
@@ -217,7 +216,6 @@ func (in *ACMEIssuerDNS01Provider) DeepCopyInto(out *ACMEIssuerDNS01Provider) {
 			**out = **in
 		}
 	}
-
 	if in.RFC2136 != nil {
 		in, out := &in.RFC2136, &out.RFC2136
 		if *in == nil {

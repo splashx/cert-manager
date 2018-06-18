@@ -20,7 +20,7 @@ type DNSProvider struct {
 	tsigAlgorithm string
 	tsigKey       string
 	tsigSecret    string
-	//timeout       time.Duration
+	timeout       time.Duration
 }
 
 // NewDNSProvider returns a DNSProvider instance configured for rfc2136
@@ -69,26 +69,27 @@ func NewDNSProviderCredentials(nameserver, tsigAlgorithm, tsigKey, tsigSecret st
 		d.tsigSecret = tsigSecret
 	}
 
+	d.timeout = 60 * time.Second
 	// Park the timeout code
-	// if timeout == "" {
-	// 	d.timeout = 60 * time.Second
-	// } else {
-	// 	t, err := time.ParseDuration(timeout)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	} else if t < 0 {
-	// 		return nil, fmt.Errorf("Invalid/negative RFC2136_TIMEOUT: %v", timeout)
-	// 	} else {
+	//if timeout == "" {
+	//      d.timeout = 60 * time.Second
+	//} else {
+	//	t, err := time.ParseDuration(timeout)
+	//	if err != nil {
+	//		return nil, err
+	//	} else if t < 0 {
+	//		return nil, fmt.Errorf("Invalid/negative RFC2136_TIMEOUT: %v", timeout)
+	//	} else {
 	// 		d.timeout = t
-	// 	}
-	// }
+	//	}
+	//}
 
 	return d, nil
 }
 
 /// Uses hardcoded value of 60s.
 func (d *DNSProvider) Timeout() (timeout, interval time.Duration) {
-	return 60 * time.Second, 5 * time.Second
+	return d.timeout, 2 * time.Second
 
 }
 
