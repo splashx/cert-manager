@@ -41,6 +41,7 @@ type dnsProviderConstructors struct {
 	cloudFlare func(email, apikey string) (*cloudflare.DNSProvider, error)
 	route53    func(accessKey, secretKey, hostedZoneID, region string, ambient bool) (*route53.DNSProvider, error)
 	azureDNS   func(clientID, clientSecret, subscriptionID, tenentID, resourceGroupName, hostedZoneName string) (*azuredns.DNSProvider, error)
+	rfc2136		 func(nameserver, tsigAlgorithm, tsigKey, tsigSecret string) (*rfc2136.DNSProvider, error)
 }
 
 // Solver is a solver for the acme dns01 challenge.
