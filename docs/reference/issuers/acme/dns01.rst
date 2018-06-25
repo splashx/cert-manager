@@ -140,6 +140,6 @@ Generic RFC2136
         name: tsig-secret
         key: secret
       # This field is optional for overriding the tsig algorithm (default HmacMD5)
-      TSIGAlgorithm: HmacMD5
+      tsigAlgorithm: HmacMD5
 
 .. _`Let's Encrypt`: https://letsencrypt.org
