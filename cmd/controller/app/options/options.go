@@ -2,11 +2,17 @@ package options
 
 import (
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/spf13/pflag"
 
 	"github.com/jetstack/cert-manager/pkg/util"
+
+	certificatescontroller "github.com/jetstack/cert-manager/pkg/controller/certificates"
+	clusterissuerscontroller "github.com/jetstack/cert-manager/pkg/controller/clusterissuers"
+	ingressshimcontroller "github.com/jetstack/cert-manager/pkg/controller/ingress-shim"
+	issuerscontroller "github.com/jetstack/cert-manager/pkg/controller/issuers"
 )
 
 type ControllerOptions struct {
@@ -19,6 +25,8 @@ type ControllerOptions struct {
 	LeaderElectionRenewDeadline time.Duration
 	LeaderElectionRetryPeriod   time.Duration
 
+	EnabledControllers []string
+
 	ACMEHTTP01SolverImage string
 
 	ClusterIssuerAmbientCredentials bool
@@ -29,6 +37,9 @@ type ControllerOptions struct {
 	DefaultIssuerKind                  string
 	DefaultACMEIssuerChallengeType     string
 	DefaultACMEIssuerDNS01ProviderName string
+
+	// DNS01Nameservers allows specifying a list of custom nameservers to perform DNS checks
+	DNS01Nameservers []string
 }
 
 const (
@@ -52,6 +63,13 @@ const (
 
 var (
 	defaultACMEHTTP01SolverImage = fmt.Sprintf("quay.io/jetstack/cert-manager-acmesolver:%s", util.AppVersion)
+
+	defaultEnabledControllers = []string{
+		issuerscontroller.ControllerName,
+		clusterissuerscontroller.ControllerName,
+		certificatescontroller.ControllerName,
+		ingressshimcontroller.ControllerName,
+	}
 )
 
 func NewControllerOptions() *ControllerOptions {
@@ -63,12 +81,14 @@ func NewControllerOptions() *ControllerOptions {
 		LeaderElectionLeaseDuration:        defaultLeaderElectionLeaseDuration,
 		LeaderElectionRenewDeadline:        defaultLeaderElectionRenewDeadline,
 		LeaderElectionRetryPeriod:          defaultLeaderElectionRetryPeriod,
+		EnabledControllers:                 defaultEnabledControllers,
 		ClusterIssuerAmbientCredentials:    defaultClusterIssuerAmbientCredentials,
 		IssuerAmbientCredentials:           defaultIssuerAmbientCredentials,
 		DefaultIssuerName:                  defaultTLSACMEIssuerName,
 		DefaultIssuerKind:                  defaultTLSACMEIssuerKind,
 		DefaultACMEIssuerChallengeType:     defaultACMEIssuerChallengeType,
 		DefaultACMEIssuerDNS01ProviderName: defaultACMEIssuerDNS01ProviderName,
+		DNS01Nameservers:                   []string{},
 	}
 }
 
@@ -98,6 +118,9 @@ func (s *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 		"The duration the clients should wait between attempting acquisition and renewal "+
 		"of a leadership. This is only applicable if leader election is enabled.")
 
+	fs.StringSliceVar(&s.EnabledControllers, "controllers", defaultEnabledControllers, ""+
+		"The set of controllers to enable.")
+
 	fs.StringVar(&s.ACMEHTTP01SolverImage, "acme-http01-solver-image", defaultACMEHTTP01SolverImage, ""+
 		"The docker image to use to solve ACME HTTP01 challenges. You most likely will not "+
 		"need to change this parameter unless you are testing a new feature or developing cert-manager.")
@@ -120,6 +143,9 @@ func (s *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&s.DefaultACMEIssuerDNS01ProviderName, "default-acme-issuer-dns01-provider-name", defaultACMEIssuerDNS01ProviderName, ""+
 		"Required if --default-acme-issuer-challenge-type is set to dns01. The DNS01 provider to use for ingresses using ACME dns01 "+
 		"validation that do not explicitly state a dns provider.")
+	fs.StringSliceVar(&s.DNS01Nameservers, "dns01-self-check-nameservers", []string{}, ""+
+		"A list of comma seperated DNS server endpoints used for DNS01 check requests. "+
+		"This should be a list containing IP address and port, for example: 8.8.8.8:53,8.8.4.4:53")
 }
 
 func (o *ControllerOptions) Validate() error {
@@ -128,6 +154,18 @@ func (o *ControllerOptions) Validate() error {
 	case "ClusterIssuer":
 	default:
 		return fmt.Errorf("invalid default issuer kind: %v", o.DefaultIssuerKind)
+	}
+
+	for _, server := range o.DNS01Nameservers {
+		// ensure all servers have a port number
+		host, _, err := net.SplitHostPort(server)
+		if err != nil {
+			return fmt.Errorf("invalid DNS server (%v): %v", err, server)
+		}
+		ip := net.ParseIP(host)
+		if ip == nil {
+			return fmt.Errorf("invalid IP address: %v", host)
+		}
 	}
 	return nil
 }

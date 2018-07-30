@@ -25,14 +25,15 @@ const (
 	CommonNameAnnotationKey = "certmanager.k8s.io/common-name"
 	IssuerNameAnnotationKey = "certmanager.k8s.io/issuer-name"
 	IssuerKindAnnotationKey = "certmanager.k8s.io/issuer-kind"
+	CertificateNameKey      = "certmanager.k8s.io/certificate-name"
 )
 
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=clusterissuers
 
+// +kubebuilder:resource:path=clusterissuers
 type ClusterIssuer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -54,8 +55,8 @@ type ClusterIssuerList struct {
 // +genclient
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=issuers
 
+// +kubebuilder:resource:path=issuers
 type Issuer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -111,6 +112,9 @@ type VaultAuth struct {
 }
 
 type VaultAppRole struct {
+	// Where the authentication path is mounted in Vault.
+	Path string `json:"path"`
+
 	RoleId    string            `json:"roleId"`
 	SecretRef SecretKeySelector `json:"secretRef"`
 }
@@ -287,8 +291,8 @@ type ACMEIssuerStatus struct {
 // +genclient
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +resource:path=certificates
 
+// +kubebuilder:resource:path=certificates
 // Certificate is a type to represent a Certificate from ACME
 type Certificate struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -308,6 +312,13 @@ type CertificateList struct {
 	Items []Certificate `json:"items"`
 }
 
+type KeyAlgorithm string
+
+const (
+	RSAKeyAlgorithm   KeyAlgorithm = "rsa"
+	ECDSAKeyAlgorithm KeyAlgorithm = "ecdsa"
+)
+
 // CertificateSpec defines the desired state of Certificate
 type CertificateSpec struct {
 	// CommonName is a common name to be used on the Certificate
@@ -324,6 +335,18 @@ type CertificateSpec struct {
 	IssuerRef ObjectReference `json:"issuerRef"`
 
 	ACME *ACMECertificateConfig `json:"acme,omitempty"`
+
+	// KeySize is the key bit size of the corresponding private key for this certificate.
+	// If provided, value must be between 2048 and 8192 inclusive when KeyAlgorithm is
+	// empty or is set to "rsa", and value must be one of (256, 384, 521) when
+	// KeyAlgorithm is set to "ecdsa".
+	KeySize int `json:"keySize,omitempty"`
+	// KeyAlgorithm is the private key algorithm of the corresponding private key
+	// for this certificate. If provided, allowed values are either "rsa" or "ecdsa"
+	// If KeyAlgorithm is specified and KeySize is not provided,
+	// key size of 256 will be used for "ecdsa" key algorithm and
+	// key size of 2048 will be used for "rsa" key algorithm.
+	KeyAlgorithm KeyAlgorithm `json:"keyAlgorithm,omitempty"`
 }
 
 // ACMEConfig contains the configuration for the ACME certificate provider

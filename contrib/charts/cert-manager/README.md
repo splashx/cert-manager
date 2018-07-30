@@ -54,14 +54,15 @@ The following table lists the configurable parameters of the cert-manager chart 
 | Parameter | Description | Default |
 | --------- | ----------- | ------- |
 | `image.repository` | Image repository | `quay.io/jetstack/cert-manager-controller` |
-| `image.tag` | Image tag | `v0.3.0` |
-| `image.pullPolicy` | Image pull policy | `IfNotPresent` |
+| `image.tag` | Image tag | `canary` |
+| `image.pullPolicy` | Image pull policy | `Always` |
 | `replicaCount`  | Number of cert-manager replicas  | `1` |
 | `createCustomResource` | Create CRD/TPR with this release | `true` |
 | `clusterResourceNamespace` | Override the namespace used to store DNS provider credentials etc. for ClusterIssuer resources | Same namespace as cert-manager pod
 | `leaderElection.Namespace` | Override the namespace used to store the ConfigMap for leader election | Same namespace as cert-manager pod
 | `certificateResourceShortNames` | Custom aliases for Certificate CRD | `["cert", "certs"]` |
 | `extraArgs` | Optional flags for cert-manager | `[]` |
+| `extraEnv` | Optional environment variables for cert-manager | `[]` |
 | `rbac.create` | If `true`, create and use RBAC resources | `true` |
 | `serviceAccount.create` | If `true`, create a new service account | `true` |
 | `serviceAccount.name` | Service account to be used. If not set and `serviceAccount.create` is `true`, a name is generated using the fullname template |  |
@@ -77,6 +78,9 @@ The following table lists the configurable parameters of the cert-manager chart 
 | `podDnsPolicy` | Optional cert-manager pod [DNS policy](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pods-dns-policy) |  |
 | `podDnsConfig` | Optional cert-manager pod [DNS configurations](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pods-dns-config) |  |
 | `podLabels` | Labels to add to the cert-manager pod | `{}` |
+| `http_proxy` | Value of the `HTTP_PROXY` environment variable in the cert-manager pod | |
+| `https_proxy` | Value of the `HTTPS_PROXY` environment variable in the cert-manager pod | |
+| `no_proxy` | Value of the `NO_PROXY` environment variable in the cert-manager pod | |
 
 Specify each parameter using the `--set key=value[,key=value]` argument to `helm install`.
 

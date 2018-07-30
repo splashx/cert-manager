@@ -32,10 +32,6 @@ const (
 	defaultCertificateDuration = time.Hour * 24 * 90
 )
 
-const (
-	keyBitSize = 2048
-)
-
 func (v *Vault) Issue(ctx context.Context, crt *v1alpha1.Certificate) ([]byte, []byte, error) {
 	key, certPem, err := v.obtainCertificate(ctx, crt)
 	if err != nil {
@@ -53,7 +49,7 @@ func (v *Vault) obtainCertificate(ctx context.Context, crt *v1alpha1.Certificate
 	// get existing certificate private key
 	signeeKey, err := kube.SecretTLSKey(v.secretsLister, crt.Namespace, crt.Spec.SecretName)
 	if k8sErrors.IsNotFound(err) || errors.IsInvalidData(err) {
-		signeeKey, err = pki.GenerateRSAPrivateKey(keyBitSize)
+		signeeKey, err = pki.GeneratePrivateKeyForCertificate(crt)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating private key: %s", err.Error())
 		}
@@ -84,7 +80,12 @@ func (v *Vault) obtainCertificate(ctx context.Context, crt *v1alpha1.Certificate
 		return nil, nil, err
 	}
 
-	return pki.EncodePKCS1PrivateKey(signeeKey), crtBytes, nil
+	keyBytes, err := pki.EncodePrivateKey(signeeKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return keyBytes, crtBytes, nil
 }
 
 func (v *Vault) initVaultClient() (*vault.Client, error) {
@@ -110,7 +111,7 @@ func (v *Vault) initVaultClient() (*vault.Client, error) {
 	if appRole.RoleId != "" {
 		token, err := v.requestTokenWithAppRoleRef(client, &appRole)
 		if err != nil {
-			return nil, fmt.Errorf("error reading Vault token from secret %s/%s: %s", v.issuerResourcesNamespace, appRole.SecretRef.Name, err.Error())
+			return nil, fmt.Errorf("error reading Vault token from AppRole: %s", err.Error())
 		}
 		client.SetToken(token)
 
@@ -131,7 +132,12 @@ func (v *Vault) requestTokenWithAppRoleRef(client *vault.Client, appRole *v1alph
 		"secret_id": secretId,
 	}
 
-	url := "/v1/auth/approle/login"
+	authPath := appRole.Path
+	if authPath == "" {
+		authPath = "approle"
+	}
+
+	url := path.Join("/v1", "auth", authPath, "login")
 
 	request := client.NewRequest("POST", url)
 
@@ -142,7 +148,7 @@ func (v *Vault) requestTokenWithAppRoleRef(client *vault.Client, appRole *v1alph
 
 	resp, err := client.RawRequest(request)
 	if err != nil {
-		return "", fmt.Errorf("error calling Vault server: %s", err.Error())
+		return "", fmt.Errorf("error logging in to Vault server: %s", err.Error())
 	}
 
 	defer resp.Body.Close()
@@ -188,7 +194,7 @@ func (v *Vault) requestVaultCert(commonName string, altNames []string, csr []byt
 
 	resp, err := client.RawRequest(request)
 	if err != nil {
-		return nil, fmt.Errorf("error calling Vault server: %s", err.Error())
+		return nil, fmt.Errorf("error signing certificate in Vault: %s", err.Error())
 	}
 
 	defer resp.Body.Close()

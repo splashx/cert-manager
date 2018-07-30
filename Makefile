@@ -49,7 +49,7 @@ DOCKER_BUILD_FLAGS := --build-arg VCS_REF=$(GIT_COMMIT) $(DOCKER_BUILD_FLAGS)
 ###############
 
 build: $(CMDS) docker_build
-verify: generate_verify deploy_verify hack_verify go_verify
+verify: generate_verify deploy_verify hack_verify dep_verify go_verify
 verify_pr: hack_verify_pr
 docker_build: $(DOCKER_BUILD_TARGETS)
 docker_push: $(DOCKER_PUSH_TARGETS)
@@ -75,6 +75,8 @@ hack_verify:
 hack_verify_pr:
 	@echo Running helm chart version checker
 	$(HACK_DIR)/verify-chart-version.sh
+	@echo Running reference docs checker
+	IMAGE=eu.gcr.io/jetstack-build-infra/gen-apidocs-img $(HACK_DIR)/verify-reference-docs.sh
 
 deploy_verify:
 	@echo Running deploy-gen
@@ -82,6 +84,10 @@ deploy_verify:
 
 # Go targets
 #################
+dep_verify:
+	@echo Running dep
+	$(HACK_DIR)/verify-deps.sh
+
 go_verify: go_fmt go_test
 
 $(CMDS):
@@ -98,7 +104,8 @@ go_test:
 			grep -v '/vendor/' | \
 			grep -v '/test/e2e' | \
 			grep -v '/pkg/client' | \
-			grep -v '/third_party' \
+			grep -v '/third_party' | \
+			grep -v '/docs/generated' \
 		)
 
 go_fmt:

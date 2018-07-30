@@ -62,6 +62,8 @@ type Acme struct {
 	// variables.
 	// Currently, only AWS ambient credential control is implemented.
 	ambientCredentials bool
+
+	dns01Nameservers []string
 }
 
 // solver solves ACME challenges by presenting the given token and key in an
@@ -90,7 +92,8 @@ func New(issuer v1alpha1.GenericIssuer,
 	podsLister corelisters.PodLister,
 	servicesLister corelisters.ServiceLister,
 	ingressLister extlisters.IngressLister,
-	ambientCreds bool) (issuer.Interface, error) {
+	ambientCreds bool,
+	dns01Nameservers []string) (issuer.Interface, error) {
 	if issuer.GetSpec().ACME == nil {
 		return nil, fmt.Errorf("acme config may not be empty")
 	}
@@ -115,7 +118,7 @@ func New(issuer v1alpha1.GenericIssuer,
 		servicesLister: servicesLister,
 		ingressLister:  ingressLister,
 
-		dnsSolver:                dns.NewSolver(issuer, client, secretsLister, resourceNamespace, ambientCreds),
+		dnsSolver:                dns.NewSolver(issuer, client, secretsLister, resourceNamespace, ambientCreds, dns01Nameservers),
 		httpSolver:               http.NewSolver(issuer, client, podsLister, servicesLister, ingressLister, acmeHTTP01SolverImage),
 		issuerResourcesNamespace: resourceNamespace,
 	}
@@ -157,7 +160,7 @@ func (a *Acme) acmeClientWithKey(accountPrivKey *rsa.PrivateKey) client.Interfac
 func (a *Acme) acmeClientImpl() (client.Interface, error) {
 	secretName, secretKey := a.acmeAccountPrivateKeyMeta()
 	glog.Infof("getting private key (%s->%s) for acme issuer %s/%s", secretName, secretKey, a.issuerResourcesNamespace, a.issuer.GetObjectMeta().Name)
-	accountPrivKey, err := kube.SecretTLSKeyRef(a.secretsLister, a.issuerResourcesNamespace, secretName, secretKey)
+	accountPrivKey, err := kube.SecretRSAKeyRef(a.secretsLister, a.issuerResourcesNamespace, secretName, secretKey)
 	if err != nil {
 		return nil, err
 	}
@@ -235,6 +238,7 @@ func init() {
 			ctx.KubeSharedInformerFactory.Core().V1().Services().Lister(),
 			ctx.KubeSharedInformerFactory.Extensions().V1beta1().Ingresses().Lister(),
 			ambientCreds,
+			ctx.DNS01Nameservers,
 		)
 	})
 }

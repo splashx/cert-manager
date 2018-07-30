@@ -10,7 +10,7 @@ requests:
    :linenos:
    :emphasize-lines: 7
 
-   apiVersion: certmanager.k8s.io
+   apiVersion: certmanager.k8s.io/v1alpha1
    kind: Issuer
    metadata:
      name: example-issuer
@@ -33,6 +33,21 @@ it is also possible to have multiple instances of the same DNS provider on a
 single Issuer (e.g. two clouddns accounts could be set, each with their own
 name).
 
+Setting nameservers for DNS01 self check
+========================================
+
+Cert-manager will check the correct DNS records exist before attempting a DNS01
+challenge.  By default, the DNS servers for this check will be taken from
+``/etc/resolv.conf``.  If this is not desired (for example with multiple
+authoritative nameservers or split-horizon DNS), the cert-manager controller
+provides the ``--dns01-self-check-nameservers`` flag, which allows overriding the default
+nameservers with a comma seperated list of custom nameservers.
+
+Example usage::
+
+    --dns01-self-check-nameservers "8.8.8.8:53,1.1.1.1:53"
+
+
 .. _supported-dns01-providers:
 
 *************************
@@ -51,6 +66,9 @@ Google CloudDNS
      serviceAccountSecretRef:
        name: prod-clouddns-svc-acct-secret
        key: service-account.json
+       
+     # for if your DNS is in a different project than your cluster
+     project: my-dns-project
 
 Amazon Route53
 ==============
@@ -86,7 +104,7 @@ Cert-manager requires the following IAM policy.
            {
                "Effect": "Allow",
                "Action": "route53:ListHostedZonesByName",
-               "Resource": "arn:aws:route53:::hostedzone/*"
+               "Resource": "*"
            }
        ]
    }
