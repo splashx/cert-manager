@@ -20,7 +20,6 @@ type DNSProvider struct {
 	tsigAlgorithm string
 	tsigKey       string
 	tsigSecret    string
-	timeout       time.Duration
 }
 
 // NewDNSProvider returns a DNSProvider instance configured for rfc2136
@@ -36,15 +35,15 @@ func NewDNSProvider() (*DNSProvider, error) {
 	tsigAlgorithm := os.Getenv("RFC2136_TSIG_ALGORITHM")
 	tsigKey := os.Getenv("RFC2136_TSIG_KEY")
 	tsigSecret := os.Getenv("RFC2136_TSIG_SECRET")
-	//timeout := os.Getenv("RFC2136_TIMEOUT")
 	return NewDNSProviderCredentials(nameserver, tsigAlgorithm, tsigKey, tsigSecret)
 }
 
 // NewDNSProviderCredentials uses the supplied credentials to return a
 // DNSProvider instance configured for rfc2136 dynamic update. To disable TSIG
 // authentication, leave the TSIG parameters as empty strings.
-// nameserver must be a network address in the form "host" or "host:port".
+// nameserver must be a network address in the form "IP" or "IP:port".
 func NewDNSProviderCredentials(nameserver, tsigAlgorithm, tsigKey, tsigSecret string) (*DNSProvider, error) {
+
 	if nameserver == "" {
 		return nil, fmt.Errorf("RFC2136 nameserver missing")
 	}
@@ -52,11 +51,17 @@ func NewDNSProviderCredentials(nameserver, tsigAlgorithm, tsigKey, tsigSecret st
 	// Append the default DNS port if none is specified.
 	if _, _, err := net.SplitHostPort(nameserver); err != nil {
 		if strings.Contains(err.Error(), "missing port") {
-			nameserver = net.JoinHostPort(nameserver, "53")
+			host := nameserver
+			if ipaddr := net.ParseIP(host); ipaddr != nil {
+				nameserver = net.JoinHostPort(host, "53")
+			} else {
+				return nil, fmt.Errorf("RFC2136 nameserver must be a valid IP Address, not %v", nameserver)
+			}
 		} else {
 			return nil, err
 		}
 	}
+
 	d := &DNSProvider{
 		nameserver: nameserver,
 	}
@@ -69,28 +74,13 @@ func NewDNSProviderCredentials(nameserver, tsigAlgorithm, tsigKey, tsigSecret st
 		d.tsigSecret = tsigSecret
 	}
 
-	d.timeout = 60 * time.Second
-	// Park the timeout code
-	//if timeout == "" {
-	//      d.timeout = 60 * time.Second
-	//} else {
-	//	t, err := time.ParseDuration(timeout)
-	//	if err != nil {
-	//		return nil, err
-	//	} else if t < 0 {
-	//		return nil, fmt.Errorf("Invalid/negative RFC2136_TIMEOUT: %v", timeout)
-	//	} else {
-	// 		d.timeout = t
-	//	}
-	//}
-
 	return d, nil
 }
 
-/// Uses hardcoded value of 60s.
+// Timeout returns the timeout and interval to use when checking for DNS
+// propagation. 300s (5m) is usually a default time for TTL in DNS
 func (d *DNSProvider) Timeout() (timeout, interval time.Duration) {
-	return d.timeout, 2 * time.Second
-
+	return 300 * time.Second, 5 * time.Second
 }
 
 // Present creates a TXT record using the specified parameters

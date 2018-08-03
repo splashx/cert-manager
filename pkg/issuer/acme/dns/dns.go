@@ -255,7 +255,7 @@ func (s *Solver) solverForIssuerProvider(providerName string) (solver, error) {
 			secret = string(secretBytes)
 		}
 
-		impl, err = rfc2136.NewDNSProviderCredentials(
+		impl, err = s.dnsProviderConstructors.rfc2136(
 			providerConfig.RFC2136.Nameserver,
 			string(providerConfig.RFC2136.TSIGAlgorithm),
 			providerConfig.RFC2136.TSIGKey,

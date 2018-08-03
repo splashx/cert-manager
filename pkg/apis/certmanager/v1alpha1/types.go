@@ -211,20 +211,26 @@ type ACMEIssuerDNS01ProviderAzureDNS struct {
 type TSIGAlgorithm string
 
 const (
-	HmacMD5    TSIGAlgorithm = "HmacMD5"
-	HmacSHA1   TSIGAlgorithm = "HmacSHA1"
-	HmacSHA256 TSIGAlgorithm = "HmacSHA256"
-	HmacSHA512 TSIGAlgorithm = "HmacSHA512"
+	HMACMD5    TSIGAlgorithm = "HMACMD5"
+	HMACSHA1   TSIGAlgorithm = "HMACSHA1"
+	HMACSHA256 TSIGAlgorithm = "HMACSHA256"
+	HMACSHA512 TSIGAlgorithm = "HMACSHA512"
 )
 
 // ACMEIssuerDNS01ProviderRFC2136 is a structure containing the DNS
 // configuration for RFC2136
 type ACMEIssuerDNS01ProviderRFC2136 struct {
-	Nameserver    string            `json:"nameserver"`
-	TSIGSecret    SecretKeySelector `json:"tsigSecretSecretRef"`
-	TSIGKey       string            `json:"tsigKey"`
-	TSIGAlgorithm TSIGAlgorithm     `json:"tsigAlgorithm"`
-	//Timeout       string            `json:"timeout"`
+	// The IP address of the DNS supporting RFC2136
+	Nameserver string `json:"nameserver"`
+
+	// The TSIG Secret configured in the DNS supporting RFC2136
+	TSIGSecret SecretKeySelector `json:"tsigSecretSecretRef"`
+
+	// The TSIG Key name configured in the DNS supporting RFC2136
+	TSIGKey string `json:"tsigKey"`
+
+	// The TSIG Algorithm configured in the DNS supporting RFC2136
+	TSIGAlgorithm TSIGAlgorithm `json:"tsigAlgorithm"`
 }
 
 // IssuerStatus contains status information about an Issuer

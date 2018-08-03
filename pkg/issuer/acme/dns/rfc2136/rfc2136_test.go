@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -53,6 +54,7 @@ func TestRFC2136ServerSuccess(t *testing.T) {
 	defer dns.HandleRemove(rfc2136TestZone)
 
 	server, addrstr, err := runLocalDNSTestServer("127.0.0.1:0", false)
+
 	if err != nil {
 		t.Fatalf("Failed to start test server: %v", err)
 	}
@@ -105,6 +107,24 @@ func TestRFC2136TsigClient(t *testing.T) {
 	if err := provider.Present(rfc2136TestDomain, "", rfc2136TestKeyAuth); err != nil {
 		t.Errorf("Expected Present() to return no error but the error was -> %v", err)
 	}
+}
+
+func TestRFC2136InvalidNameserver(t *testing.T) {
+	_, err := NewDNSProviderCredentials("dns01.example.org", "", rfc2136TestTsigKey, rfc2136TestTsigSecret)
+	fmt.Println(err.Error())
+	assert.Error(t, err)
+}
+
+func TestRFC2136DefaultTSGIAlgorithm(t *testing.T) {
+	provider, err := NewDNSProviderCredentials("127.0.0.1:0", "", rfc2136TestTsigKey, rfc2136TestTsigSecret)
+	if err != nil {
+		assert.Equal(t, provider.tsigAlgorithm, dns.HmacMD5, "Default TSIG must match")
+	}
+}
+
+func TestRFC2136NamserverWithoutPort(t *testing.T) {
+	_, err := NewDNSProviderCredentials("127.0.0.1", "", rfc2136TestTsigKey, rfc2136TestTsigSecret)
+	assert.NoError(t, err)
 }
 
 func TestRFC2136ValidUpdatePacket(t *testing.T) {

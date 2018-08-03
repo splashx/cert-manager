@@ -15,6 +15,7 @@ import (
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/azuredns"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/clouddns"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/cloudflare"
+	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/rfc2136"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/route53"
 )
 
@@ -77,6 +78,10 @@ func newFakeDNSProviders() *fakeDNSProviders {
 		},
 		azureDNS: func(clientID, clientSecret, subscriptionID, tenentID, resourceGroupName, hostedZoneName string) (*azuredns.DNSProvider, error) {
 			f.call("azuredns", clientID, clientSecret, subscriptionID, tenentID, resourceGroupName, hostedZoneName)
+			return nil, nil
+		},
+		rfc2136: func(nameserver, tsigAlgorithm, tsigKey, tsigSecret string) (*rfc2136.DNSProvider, error) {
+			f.call("rfc2136", nameserver, tsigAlgorithm, tsigKey, tsigSecret)
 			return nil, nil
 		},
 	}
@@ -156,7 +161,7 @@ func TestSolverFor(t *testing.T) {
 		expectedSolverType reflect.Type
 	}
 	tests := map[string]testT{
-		"loads secret for cloudflare provider": {
+		"Cloudflare: loads secret for provider": {
 			f: &fixture{
 				Issuer: newIssuer("test", "default", []v1alpha1.ACMEIssuerDNS01Provider{
 					{
@@ -187,7 +192,7 @@ func TestSolverFor(t *testing.T) {
 			domain:             "example.com",
 			expectedSolverType: reflect.TypeOf(&cloudflare.DNSProvider{}),
 		},
-		"fails to load a cloudflare provider with a missing secret": {
+		"Cloudflare: fails to load provider with a missing secret": {
 			f: &fixture{
 				Issuer: newIssuer("test", "default", []v1alpha1.ACMEIssuerDNS01Provider{
 					{
@@ -217,7 +222,7 @@ func TestSolverFor(t *testing.T) {
 			domain:    "example.com",
 			expectErr: true,
 		},
-		"fails to load a cloudflare provider with an invalid secret": {
+		"Cloudflare: fails to load provider with an invalid secret": {
 			f: &fixture{
 				Issuer: newIssuer("test", "default", []v1alpha1.ACMEIssuerDNS01Provider{
 					{
@@ -248,7 +253,7 @@ func TestSolverFor(t *testing.T) {
 			domain:    "example.com",
 			expectErr: true,
 		},
-		"fails to load a provider with a non-existent provider set for the domain": {
+		"Cloudflare: fails to load a cloudflare provider with a non-existent provider set for the domain": {
 			f: &fixture{
 				Issuer: newIssuer("test", "default", []v1alpha1.ACMEIssuerDNS01Provider{
 					{
@@ -278,6 +283,103 @@ func TestSolverFor(t *testing.T) {
 			},
 			domain:    "example.com",
 			expectErr: true,
+		},
+		"RFC2136: fails to load provider with an invalid secret": {
+			f: &fixture{
+				Issuer: newIssuer("test", "default", []v1alpha1.ACMEIssuerDNS01Provider{
+					{
+						Name: "fake-rfc2136",
+						RFC2136: &v1alpha1.ACMEIssuerDNS01ProviderRFC2136{
+							Nameserver:    "192.168.0.1",
+							TSIGKey:       "test-key",
+							TSIGAlgorithm: "HMACMD5",
+							TSIGSecret: v1alpha1.SecretKeySelector{
+								LocalObjectReference: v1alpha1.LocalObjectReference{
+									Name: "rfc2136-tsig-key",
+								},
+								Key: "tsgikey",
+							},
+						},
+					},
+				}),
+				SecretLister: []*corev1.Secret{newSecret("rfc2136-tsig-key", "default", map[string][]byte{
+					"tsgikey-oops": []byte("IwBTJx9wrDp4Y1RyC3H0gA=="),
+				})},
+				ResourceNamespace: "default",
+				Challenge: v1alpha1.ACMEOrderChallenge{
+					ACMESolverConfig: v1alpha1.ACMESolverConfig{
+						DNS01: &v1alpha1.ACMECertificateDNS01Config{
+							Provider: "fakerfc2136",
+						},
+					},
+				},
+			},
+			domain:    "example.com",
+			expectErr: true,
+		},
+		"RFC2136: fails to load provider without secret": {
+			f: &fixture{
+				Issuer: newIssuer("test", "default", []v1alpha1.ACMEIssuerDNS01Provider{
+					{
+						Name: "fake-rfc2136",
+						RFC2136: &v1alpha1.ACMEIssuerDNS01ProviderRFC2136{
+							Nameserver:    "192.168.0.1",
+							TSIGKey:       "test-key",
+							TSIGAlgorithm: "HMACMD5",
+							TSIGSecret: v1alpha1.SecretKeySelector{
+								LocalObjectReference: v1alpha1.LocalObjectReference{
+									Name: "rfc2136-tsig-key",
+								},
+								Key: "tsgikey",
+							},
+						},
+					},
+				}),
+				SecretLister:      []*corev1.Secret{},
+				ResourceNamespace: "default",
+				Challenge: v1alpha1.ACMEOrderChallenge{
+					ACMESolverConfig: v1alpha1.ACMESolverConfig{
+						DNS01: &v1alpha1.ACMECertificateDNS01Config{
+							Provider: "fake-rfc2136",
+						},
+					},
+				},
+			},
+			domain:    "example.com",
+			expectErr: true,
+		},
+		"RFC2136: use default TSGI Algorithm value": {
+			f: &fixture{
+				Issuer: newIssuer("test", "default", []v1alpha1.ACMEIssuerDNS01Provider{
+					{
+						Name: "fake-rfc2136",
+						RFC2136: &v1alpha1.ACMEIssuerDNS01ProviderRFC2136{
+							Nameserver:    "192.168.0.1",
+							TSIGKey:       "test-key",
+							TSIGAlgorithm: "HMACMD5",
+							TSIGSecret: v1alpha1.SecretKeySelector{
+								LocalObjectReference: v1alpha1.LocalObjectReference{
+									Name: "rfc2136-tsig-key",
+								},
+								Key: "tsgikey",
+							},
+						},
+					},
+				}),
+				SecretLister: []*corev1.Secret{newSecret("rfc2136-tsig-key", "default", map[string][]byte{
+					"tsgikey": []byte("IwBTJx9wrDp4Y1RyC3H0gA=="),
+				})},
+				ResourceNamespace: "default",
+				Challenge: v1alpha1.ACMEOrderChallenge{
+					ACMESolverConfig: v1alpha1.ACMESolverConfig{
+						DNS01: &v1alpha1.ACMECertificateDNS01Config{
+							Provider: "fake-rfc2136",
+						},
+					},
+				},
+			},
+			domain:             "example.com",
+			expectedSolverType: reflect.TypeOf(&rfc2136.DNSProvider{}),
 		},
 	}
 	testFn := func(test testT) func(*testing.T) {
