@@ -348,14 +348,45 @@ func TestSolverFor(t *testing.T) {
 			domain:    "example.com",
 			expectErr: true,
 		},
-		"RFC2136: use default TSGI Algorithm value": {
+		"RFC2136: missing TSGI Algorithm value (use default)": {
+			f: &fixture{
+				Issuer: newIssuer("test", "default", []v1alpha1.ACMEIssuerDNS01Provider{
+					{
+						Name: "fake-rfc2136",
+						RFC2136: &v1alpha1.ACMEIssuerDNS01ProviderRFC2136{
+							Nameserver: "192.168.0.1",
+							TSIGKey:    "test-key",
+							TSIGSecret: v1alpha1.SecretKeySelector{
+								LocalObjectReference: v1alpha1.LocalObjectReference{
+									Name: "rfc2136-tsig-key",
+								},
+								Key: "tsgikey",
+							},
+						},
+					},
+				}),
+				SecretLister: []*corev1.Secret{newSecret("rfc2136-tsig-key", "default", map[string][]byte{
+					"tsgikey": []byte("IwBTJx9wrDp4Y1RyC3H0gA=="),
+				})},
+				ResourceNamespace: "default",
+				Challenge: v1alpha1.ACMEOrderChallenge{
+					ACMESolverConfig: v1alpha1.ACMESolverConfig{
+						DNS01: &v1alpha1.ACMECertificateDNS01Config{
+							Provider: "fake-rfc2136",
+						},
+					},
+				},
+			},
+			domain:             "example.com",
+			expectedSolverType: reflect.TypeOf(&rfc2136.DNSProvider{}),
+		},
+		"RFC2136: missing TSIGKey (disable TSIG authentication)": {
 			f: &fixture{
 				Issuer: newIssuer("test", "default", []v1alpha1.ACMEIssuerDNS01Provider{
 					{
 						Name: "fake-rfc2136",
 						RFC2136: &v1alpha1.ACMEIssuerDNS01ProviderRFC2136{
 							Nameserver:    "192.168.0.1",
-							TSIGKey:       "test-key",
 							TSIGAlgorithm: "HMACMD5",
 							TSIGSecret: v1alpha1.SecretKeySelector{
 								LocalObjectReference: v1alpha1.LocalObjectReference{
