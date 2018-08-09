@@ -24,6 +24,7 @@ requests:
          providers:
          - name: prod-clouddns
            clouddns:
+             project: my-project
              serviceAccountSecretRef:
                name: prod-clouddns-svc-acct-secret
                key: service-account.json
@@ -63,12 +64,10 @@ Google CloudDNS
 .. code-block:: yaml
 
    clouddns:
+     project: my-project
      serviceAccountSecretRef:
        name: prod-clouddns-svc-acct-secret
        key: service-account.json
-       
-     # for if your DNS is in a different project than your cluster
-     project: my-dns-project
 
 Amazon Route53
 ==============
@@ -149,15 +148,12 @@ Generic RFC2136
 .. code-block:: yaml
 
     rfc2136:
-      # Nameserver to send DDNS Updates
       nameserver: 192.168.0.1
-      # tsig key
-      tsigKey: tsig-key
-      # A kubernetes SecretRef to the TSIG Secret
-      tsigSecretSecretRef:
-        name: tsig-secret
-        key: secret
-      # This field is optional - defaults to HMACMD5
+      tsigKey: myzone-tsig
       tsigAlgorithm: HMACMD5
+      tsigSecretSecretRef:
+        name: my-secret
+        key: tsigkey
+
 
 .. _`Let's Encrypt`: https://letsencrypt.org

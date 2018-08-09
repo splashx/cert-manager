@@ -13,6 +13,15 @@ import (
 	"github.com/miekg/dns"
 )
 
+// The full list of algos is here https://tools.ietf.org/html/rfc4635#section-2
+// but miekd/dns supports only the ones below
+var SupportedAlgorithms = map[string]string{
+	"HMACMD5":    dns.HmacMD5,
+	"HMACSHA1":   dns.HmacSHA1,
+	"HMACSHA256": dns.HmacSHA256,
+	"HMACSHA512": dns.HmacSHA512,
+}
+
 // DNSProvider is an implementation of the acme.ChallengeProvider interface that
 // uses dynamic DNS updates (RFC 2136) to create TXT records on a nameserver.
 type DNSProvider struct {
@@ -65,10 +74,20 @@ func NewDNSProviderCredentials(nameserver, tsigAlgorithm, tsigKey, tsigSecret st
 	d := &DNSProvider{
 		nameserver: nameserver,
 	}
+
 	if tsigAlgorithm == "" {
 		tsigAlgorithm = dns.HmacMD5
+	} else {
+		if value, ok := SupportedAlgorithms[strings.ToUpper(tsigAlgorithm)]; ok {
+			tsigAlgorithm = value
+		} else {
+			return nil, fmt.Errorf("The algorithm '%v' is not supported", tsigAlgorithm)
+
+		}
 	}
+
 	d.tsigAlgorithm = tsigAlgorithm
+
 	if len(tsigKey) > 0 && len(tsigSecret) > 0 {
 		d.tsigKey = tsigKey
 		d.tsigSecret = tsigSecret
