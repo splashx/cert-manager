@@ -111,7 +111,6 @@ func TestRFC2136TsigClient(t *testing.T) {
 
 func TestRFC2136InvalidNameserver(t *testing.T) {
 	_, err := NewDNSProviderCredentials("dns01.example.org", "", rfc2136TestTsigKey, rfc2136TestTsigSecret)
-	fmt.Println(err.Error())
 	assert.Error(t, err)
 }
 
