@@ -732,19 +732,19 @@ Appears In:
 <tbody>
 <tr>
 <td><code>nameserver</code><br /> <em>string</em></td>
-<td>The IP address of the DNS supporting RFC2136</td>
+<td>The IP address of the DNS supporting RFC2136. Required.</td>
 </tr>
 <tr>
 <td><code>tsigAlgorithm</code><br /> <em>string</em></td>
-<td>The TSIG Algorithm configured in the DNS supporting RFC2136</td>
+<td>The TSIG Algorithm configured in the DNS supporting RFC2136. Acceptable values are (case-insensitive): <code>HMACMD5</code> (default), <code>HMACSHA1</code>, <code>HMACSHA256</code> or <code>HMACSHA512</code></td>
 </tr>
 <tr>
 <td><code>tsigKey</code><br /> <em>string</em></td>
-<td>The TSIG Key name configured in the DNS supporting RFC2136</td>
+<td>The TSIG Key name configured in the DNS. If <code>tsigKey</code> is not defined, <code>tsigSecretSecretRef</code> is ignored</td>
 </tr>
 <tr>
 <td><code>tsigSecretSecretRef</code><br /> <em><a href="#secretkeyselector-v1alpha1">SecretKeySelector</a></em></td>
-<td>The TSIG Secret configured in the DNS supporting RFC2136</td>
+<td>The name of the secret containing the TSIG value. If <code>tsigSecretSecretRef</code> is not defined, <code>tsigKey</code> is ignored.</td>
 </tr>
 </tbody>
 </table>

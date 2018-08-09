@@ -226,7 +226,7 @@ func (s *Solver) solverForIssuerProvider(issuer v1alpha1.GenericIssuer, provider
 	case providerConfig.RFC2136 != nil:
 		var secret string
 		if len(providerConfig.RFC2136.TSIGSecret.Name) > 0 {
-			tsigSecret, err := s.secretLister.Secrets(s.resourceNamespace).Get(providerConfig.RFC2136.TSIGSecret.Name)
+			tsigSecret, err := s.secretLister.Secrets(resourceNamespace).Get(providerConfig.RFC2136.TSIGSecret.Name)
 			if err != nil {
 				return nil, fmt.Errorf("error getting rfc2136 service account: %s", err.Error())
 			}

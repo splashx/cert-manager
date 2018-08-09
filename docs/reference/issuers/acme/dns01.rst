@@ -148,15 +148,12 @@ Generic RFC2136
 .. code-block:: yaml
 
     rfc2136:
-      # Nameserver to send DDNS Updates
       nameserver: 192.168.0.1
-      # tsig key
-      tsigKey: tsig-key
-      # A kubernetes SecretRef to the TSIG Secret
-      tsigSecretSecretRef:
-        name: tsig-secret
-        key: secret
-      # This field is optional - defaults to HMACMD5
+      tsigKey: myzone-tsig
       tsigAlgorithm: HMACMD5
+      tsigSecretSecretRef:
+        name: my-secret
+        key: tsigkey
+
 
 .. _`Let's Encrypt`: https://letsencrypt.org

@@ -114,11 +114,16 @@ func TestRFC2136InvalidNameserver(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestRFC2136DefaultTSGIAlgorithm(t *testing.T) {
+func TestRFC2136DefaultTSIGAlgorithm(t *testing.T) {
 	provider, err := NewDNSProviderCredentials("127.0.0.1:0", "", rfc2136TestTsigKey, rfc2136TestTsigSecret)
 	if err != nil {
 		assert.Equal(t, provider.tsigAlgorithm, dns.HmacMD5, "Default TSIG must match")
 	}
+}
+
+func TestRFC2136InvalidTSIGAlgorithm(t *testing.T) {
+	_, err := NewDNSProviderCredentials("127.0.0.1:0", "HAMMOCK", rfc2136TestTsigKey, rfc2136TestTsigSecret)
+	assert.Error(t, err)
 }
 
 func TestRFC2136NamserverWithoutPort(t *testing.T) {

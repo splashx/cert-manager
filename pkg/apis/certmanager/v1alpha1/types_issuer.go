@@ -1,6 +1,8 @@
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // +genclient
 // +genclient:nonNamespaced
@@ -184,28 +186,25 @@ type ACMEIssuerDNS01ProviderAzureDNS struct {
 // ACMEIssuerDNS01ProviderRFC2136 is a structure containing the
 // configuration for RFC2136 DNS
 type ACMEIssuerDNS01ProviderRFC2136 struct {
-	// The IP address of the DNS supporting RFC2136
+	// The IP address of the DNS supporting RFC2136. Required.
 	Nameserver string `json:"nameserver"`
 
-	// The TSIG Secret configured in the DNS supporting RFC2136
+	// The name of the secret containing the TSIG value.
+	// If ``tsigSecretSecretRef`` is not defined, ``tsigKey`` is ignored.
+	// +optional
 	TSIGSecret SecretKeySelector `json:"tsigSecretSecretRef"`
 
-	// The TSIG Key name configured in the DNS supporting RFC2136
+	// The TSIG Key name configured in the DNS. If ``tsigKey`` is not defined,
+	// ``tsigSecretSecretRef`` is ignored
+	// +optional
 	TSIGKey string `json:"tsigKey"`
 
-	// The TSIG Algorithm configured in the DNS supporting RFC2136
-	TSIGAlgorithm TSIGAlgorithm `json:"tsigAlgorithm"`
+	// The TSIG Algorithm configured in the DNS supporting RFC2136. Acceptable
+	// values are (case-insensitive): ``HMACMD5`` (default), ``HMACSHA1``,
+	// ``HMACSHA256`` or ``HMACSHA512``
+	// +optional
+	TSIGAlgorithm string `json:"tsigAlgorithm"`
 }
-
-// TSIGAlgorithm are valid TSIG HMAC hashing algorithms
-type TSIGAlgorithm string
-
-const (
-	HMACMD5    TSIGAlgorithm = "HMACMD5"
-	HMACSHA1   TSIGAlgorithm = "HMACSHA1"
-	HMACSHA256 TSIGAlgorithm = "HMACSHA256"
-	HMACSHA512 TSIGAlgorithm = "HMACSHA512"
-)
 
 // IssuerStatus contains status information about an Issuer
 type IssuerStatus struct {
