@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package clusterissuers
 
 import (
@@ -44,7 +60,7 @@ func (c *Controller) Sync(ctx context.Context, iss *v1alpha1.ClusterIssuer) (err
 		}
 	}
 
-	i, err := c.issuerFactory.IssuerFor(issuerCopy)
+	i, err := c.IssuerFactory().IssuerFor(issuerCopy)
 	if err != nil {
 		return err
 	}
@@ -53,7 +69,7 @@ func (c *Controller) Sync(ctx context.Context, iss *v1alpha1.ClusterIssuer) (err
 	if err != nil {
 		s := messageErrorInitIssuer + err.Error()
 		glog.Info(s)
-		c.recorder.Event(issuerCopy, v1.EventTypeWarning, errorInitIssuer, s)
+		c.Recorder.Event(issuerCopy, v1.EventTypeWarning, errorInitIssuer, s)
 		return err
 	}
 
@@ -67,5 +83,5 @@ func (c *Controller) updateIssuerStatus(old, new *v1alpha1.ClusterIssuer) (*v1al
 	// TODO: replace Update call with UpdateStatus. This requires a custom API
 	// server with the /status subresource enabled and/or subresource support
 	// for CRDs (https://github.com/kubernetes/kubernetes/issues/38113)
-	return c.cmClient.CertmanagerV1alpha1().ClusterIssuers().Update(new)
+	return c.CMClient.CertmanagerV1alpha1().ClusterIssuers().Update(new)
 }

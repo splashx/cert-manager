@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package client
 
 import (
@@ -14,6 +30,7 @@ import (
 type FakeACME struct {
 	FakeCreateOrder             func(ctx context.Context, order *acme.Order) (*acme.Order, error)
 	FakeGetOrder                func(ctx context.Context, url string) (*acme.Order, error)
+	FakeGetCertificate          func(ctx context.Context, url string) ([][]byte, error)
 	FakeWaitOrder               func(ctx context.Context, url string) (*acme.Order, error)
 	FakeFinalizeOrder           func(ctx context.Context, finalizeURL string, csr []byte) (der [][]byte, err error)
 	FakeAcceptChallenge         func(ctx context.Context, chal *acme.Challenge) (*acme.Challenge, error)
@@ -38,6 +55,13 @@ func (f *FakeACME) GetOrder(ctx context.Context, url string) (*acme.Order, error
 		return f.FakeGetOrder(ctx, url)
 	}
 	return nil, fmt.Errorf("GetOrder not implemented")
+}
+
+func (f *FakeACME) GetCertificate(ctx context.Context, url string) ([][]byte, error) {
+	if f.FakeGetCertificate != nil {
+		return f.FakeGetCertificate(ctx, url)
+	}
+	return nil, fmt.Errorf("GetCertificate not implemented")
 }
 
 func (f *FakeACME) WaitOrder(ctx context.Context, url string) (*acme.Order, error) {

@@ -1,12 +1,33 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pki
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha1"
 )
@@ -198,5 +219,66 @@ func TestGeneratePrivateKeyForCertificate(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, testFn(test))
+	}
+}
+
+func signTestCert(key crypto.Signer) *x509.Certificate {
+	commonName := "testingcert"
+
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		panic(fmt.Errorf("failed to generate serial number: %s", err.Error()))
+	}
+
+	template := &x509.Certificate{
+		Version:               3,
+		BasicConstraintsValid: true,
+		SerialNumber:          serialNumber,
+		SignatureAlgorithm:    x509.SHA256WithRSA,
+		Subject: pkix.Name{
+			Organization: []string{defaultOrganization},
+			CommonName:   commonName,
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(defaultNotAfter),
+		// see http://golang.org/pkg/crypto/x509/#KeyUsage
+		KeyUsage: x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+	}
+
+	_, crt, err := SignCertificate(template, template, key.Public(), key)
+	if err != nil {
+		panic(fmt.Errorf("error signing test cert: %v", err))
+	}
+
+	return crt
+}
+
+func TestPublicKeyMatchesCertificate(t *testing.T) {
+	privKey1, err := GenerateRSAPrivateKey(2048)
+	if err != nil {
+		t.Errorf("error generating private key: %v", err)
+	}
+	privKey2, err := GenerateRSAPrivateKey(2048)
+	if err != nil {
+		t.Errorf("error generating private key: %v", err)
+	}
+
+	testCert1 := signTestCert(privKey1)
+	testCert2 := signTestCert(privKey2)
+
+	matches, err := PublicKeyMatchesCertificate(privKey1.Public(), testCert1)
+	if err != nil {
+		t.Errorf("expected no error, but got: %v", err)
+	}
+	if !matches {
+		t.Errorf("expected private key to match certificate, but it did not")
+	}
+
+	matches, err = PublicKeyMatchesCertificate(privKey1.Public(), testCert2)
+	if err != nil {
+		t.Errorf("expected no error, but got: %v", err)
+	}
+	if matches {
+		t.Errorf("expected private key to not match certificate, but it did")
 	}
 }

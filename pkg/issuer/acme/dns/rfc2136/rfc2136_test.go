@@ -1,3 +1,24 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Package rfc2136 implements a DNS provider for solving the DNS-01 challenge
+// using the rfc2136 dynamic update.
+// This code was adapted from lego:
+// 	  https://github.com/xenolf/lego
+
 package rfc2136
 
 import (
@@ -10,6 +31,7 @@ import (
 	"time"
 
 	"github.com/miekg/dns"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -53,6 +75,7 @@ func TestRFC2136ServerSuccess(t *testing.T) {
 	defer dns.HandleRemove(rfc2136TestZone)
 
 	server, addrstr, err := runLocalDNSTestServer("127.0.0.1:0", false)
+
 	if err != nil {
 		t.Fatalf("Failed to start test server: %v", err)
 	}
@@ -105,6 +128,28 @@ func TestRFC2136TsigClient(t *testing.T) {
 	if err := provider.Present(rfc2136TestDomain, "", rfc2136TestKeyAuth); err != nil {
 		t.Errorf("Expected Present() to return no error but the error was -> %v", err)
 	}
+}
+
+func TestRFC2136InvalidNameserver(t *testing.T) {
+	_, err := NewDNSProviderCredentials("dns01.example.org", "", rfc2136TestTsigKey, rfc2136TestTsigSecret)
+	assert.Error(t, err)
+}
+
+func TestRFC2136DefaultTSIGAlgorithm(t *testing.T) {
+	provider, err := NewDNSProviderCredentials("127.0.0.1:0", "", rfc2136TestTsigKey, rfc2136TestTsigSecret)
+	if err != nil {
+		assert.Equal(t, provider.tsigAlgorithm, dns.HmacMD5, "Default TSIG must match")
+	}
+}
+
+func TestRFC2136InvalidTSIGAlgorithm(t *testing.T) {
+	_, err := NewDNSProviderCredentials("127.0.0.1:0", "HAMMOCK", rfc2136TestTsigKey, rfc2136TestTsigSecret)
+	assert.Error(t, err)
+}
+
+func TestRFC2136NamserverWithoutPort(t *testing.T) {
+	_, err := NewDNSProviderCredentials("127.0.0.1", "", rfc2136TestTsigKey, rfc2136TestTsigSecret)
+	assert.NoError(t, err)
 }
 
 func TestRFC2136ValidUpdatePacket(t *testing.T) {

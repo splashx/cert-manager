@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package v1alpha1
 
 import (
@@ -32,18 +48,15 @@ func (a *ACMEIssuerDNS01Config) Provider(name string) (*ACMEIssuerDNS01Provider,
 	return nil, fmt.Errorf("issuer does not contain DNS01 configuration for provider named %q", name)
 }
 
-func (a *ACMECertificateConfig) ConfigForDomain(domain string) *ACMECertificateDomainConfig {
-	if a == nil {
-		return &ACMECertificateDomainConfig{}
-	}
-	for _, cfg := range a.Config {
+func ConfigForDomain(cfgs []DomainSolverConfig, domain string) *DomainSolverConfig {
+	for _, cfg := range cfgs {
 		for _, d := range cfg.Domains {
 			if d == domain {
 				return &cfg
 			}
 		}
 	}
-	return &ACMECertificateDomainConfig{}
+	return &DomainSolverConfig{}
 }
 
 func (c *CertificateStatus) ACMEStatus() *CertificateACMEStatus {

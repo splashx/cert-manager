@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package vault
 
 import (
@@ -100,7 +116,7 @@ func (v *Vault) initVaultClient() (*vault.Client, error) {
 	if tokenRef.Name != "" {
 		token, err := v.vaultTokenRef(tokenRef.Name, tokenRef.Key)
 		if err != nil {
-			return nil, fmt.Errorf("error reading Vault token from secret %s/%s: %s", v.issuerResourcesNamespace, tokenRef.Name, err.Error())
+			return nil, fmt.Errorf("error reading Vault token from secret %s/%s: %s", v.resourceNamespace, tokenRef.Name, err.Error())
 		}
 		client.SetToken(token)
 
@@ -124,7 +140,7 @@ func (v *Vault) initVaultClient() (*vault.Client, error) {
 func (v *Vault) requestTokenWithAppRoleRef(client *vault.Client, appRole *v1alpha1.VaultAppRole) (string, error) {
 	roleId, secretId, err := v.appRoleRef(appRole)
 	if err != nil {
-		return "", fmt.Errorf("error reading Vault AppRole from secret: %s/%s: %s", appRole.SecretRef.Name, v.issuerResourcesNamespace, err.Error())
+		return "", fmt.Errorf("error reading Vault AppRole from secret: %s/%s: %s", appRole.SecretRef.Name, v.resourceNamespace, err.Error())
 	}
 
 	parameters := map[string]string{
@@ -221,7 +237,7 @@ func (v *Vault) requestVaultCert(commonName string, altNames []string, csr []byt
 func (v *Vault) appRoleRef(appRole *v1alpha1.VaultAppRole) (roleId, secretId string, err error) {
 	roleId = strings.TrimSpace(appRole.RoleId)
 
-	secret, err := v.secretsLister.Secrets(v.issuerResourcesNamespace).Get(appRole.SecretRef.Name)
+	secret, err := v.secretsLister.Secrets(v.resourceNamespace).Get(appRole.SecretRef.Name)
 	if err != nil {
 		return "", "", err
 	}
@@ -233,7 +249,7 @@ func (v *Vault) appRoleRef(appRole *v1alpha1.VaultAppRole) (roleId, secretId str
 
 	keyBytes, ok := secret.Data[key]
 	if !ok {
-		return "", "", fmt.Errorf("no data for %q in secret '%s/%s'", key, appRole.SecretRef.Name, v.issuerResourcesNamespace)
+		return "", "", fmt.Errorf("no data for %q in secret '%s/%s'", key, appRole.SecretRef.Name, v.resourceNamespace)
 	}
 
 	secretId = string(keyBytes)
@@ -243,7 +259,7 @@ func (v *Vault) appRoleRef(appRole *v1alpha1.VaultAppRole) (roleId, secretId str
 }
 
 func (v *Vault) vaultTokenRef(name, key string) (string, error) {
-	secret, err := v.secretsLister.Secrets(v.issuerResourcesNamespace).Get(name)
+	secret, err := v.secretsLister.Secrets(v.resourceNamespace).Get(name)
 	if err != nil {
 		return "", err
 	}
@@ -254,7 +270,7 @@ func (v *Vault) vaultTokenRef(name, key string) (string, error) {
 
 	keyBytes, ok := secret.Data[key]
 	if !ok {
-		return "", fmt.Errorf("no data for %q in secret '%s/%s'", key, name, v.issuerResourcesNamespace)
+		return "", fmt.Errorf("no data for %q in secret '%s/%s'", key, name, v.resourceNamespace)
 	}
 
 	token := string(keyBytes)

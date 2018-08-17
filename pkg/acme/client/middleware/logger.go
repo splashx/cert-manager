@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package middleware
 
 import (
@@ -5,7 +21,7 @@ import (
 
 	"github.com/golang/glog"
 
-	"github.com/jetstack/cert-manager/pkg/issuer/acme/client"
+	"github.com/jetstack/cert-manager/pkg/acme/client"
 	"github.com/jetstack/cert-manager/third_party/crypto/acme"
 )
 
@@ -26,6 +42,11 @@ func (l *Logger) CreateOrder(ctx context.Context, order *acme.Order) (*acme.Orde
 func (l *Logger) GetOrder(ctx context.Context, url string) (*acme.Order, error) {
 	glog.Infof("Calling GetOrder")
 	return l.baseCl.GetOrder(ctx, url)
+}
+
+func (l *Logger) GetCertificate(ctx context.Context, url string) ([][]byte, error) {
+	glog.Infof("Calling GetCertificate")
+	return l.baseCl.GetCertificate(ctx, url)
 }
 
 func (l *Logger) WaitOrder(ctx context.Context, url string) (*acme.Order, error) {

@@ -1,5 +1,5 @@
 /*
-Copyright YEAR Jetstack Ltd.
+Copyright 2018 The Jetstack cert-manager contributors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,3 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
+// Package test contains testing utilities used for constructing fake Contexts
+// which can be used during tests.
+//
+// It should be used for all unit tests that require a set of fake clientsets etc
+// in order to provide test consistency.
+package test

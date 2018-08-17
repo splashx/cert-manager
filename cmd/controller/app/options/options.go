@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package options
 
 import (
@@ -31,6 +47,7 @@ type ControllerOptions struct {
 
 	ClusterIssuerAmbientCredentials bool
 	IssuerAmbientCredentials        bool
+	RenewBeforeExpiryDuration       time.Duration
 
 	// Default issuer/certificates details consumed by ingress-shim
 	DefaultIssuerName                  string
@@ -48,12 +65,13 @@ const (
 
 	defaultLeaderElect                 = true
 	defaultLeaderElectionNamespace     = "kube-system"
-	defaultLeaderElectionLeaseDuration = 15 * time.Second
-	defaultLeaderElectionRenewDeadline = 10 * time.Second
-	defaultLeaderElectionRetryPeriod   = 2 * time.Second
+	defaultLeaderElectionLeaseDuration = 60 * time.Second
+	defaultLeaderElectionRenewDeadline = 40 * time.Second
+	defaultLeaderElectionRetryPeriod   = 15 * time.Second
 
 	defaultClusterIssuerAmbientCredentials = true
 	defaultIssuerAmbientCredentials        = false
+	defaultRenewBeforeExpiryDuration       = time.Hour * 24 * 30
 
 	defaultTLSACMEIssuerName           = ""
 	defaultTLSACMEIssuerKind           = "Issuer"
@@ -84,6 +102,7 @@ func NewControllerOptions() *ControllerOptions {
 		EnabledControllers:                 defaultEnabledControllers,
 		ClusterIssuerAmbientCredentials:    defaultClusterIssuerAmbientCredentials,
 		IssuerAmbientCredentials:           defaultIssuerAmbientCredentials,
+		RenewBeforeExpiryDuration:          defaultRenewBeforeExpiryDuration,
 		DefaultIssuerName:                  defaultTLSACMEIssuerName,
 		DefaultIssuerKind:                  defaultTLSACMEIssuerKind,
 		DefaultACMEIssuerChallengeType:     defaultACMEIssuerChallengeType,
@@ -133,6 +152,10 @@ func (s *ControllerOptions) AddFlags(fs *pflag.FlagSet) {
 		"Whether an issuer may make use of ambient credentials. 'Ambient Credentials' are credentials drawn from the environment, metadata services, or local files which are not explicitly configured in the Issuer API object. "+
 		"When this flag is enabled, the following sources for credentials are also used: "+
 		"AWS - All sources the Go SDK defaults to, notably including any EC2 IAM roles available via instance metadata.")
+	fs.DurationVar(&s.RenewBeforeExpiryDuration, "renew-before-expiry-duration", defaultRenewBeforeExpiryDuration, ""+
+		"The default 'renew before expiry' time for Certificates. "+
+		"Once a certificate is within this duration until expiry, a new Certificate "+
+		"will be attempted to be issued.")
 
 	fs.StringVar(&s.DefaultIssuerName, "default-issuer-name", defaultTLSACMEIssuerName, ""+
 		"Name of the Issuer to use when the tls is requested but issuer name is not specified on the ingress resource.")

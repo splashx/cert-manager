@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package validation
 
 import (
@@ -76,13 +92,13 @@ func validateACMEConfigForAllDNSNames(a *v1alpha1.CertificateSpec, fldPath *fiel
 		return fmt.Sprintf("no ACME solver configuration specified for domain %q", s)
 	}
 	if a.CommonName != "" {
-		cfg := a.ACME.ConfigForDomain(a.CommonName)
+		cfg := v1alpha1.ConfigForDomain(a.ACME.Config, a.CommonName)
 		if cfg == nil || len(cfg.Domains) == 0 {
 			el = append(el, field.Required(acmeFldPath.Child("config"), errFn(a.CommonName)))
 		}
 	}
 	for _, d := range a.DNSNames {
-		cfg := a.ACME.ConfigForDomain(d)
+		cfg := v1alpha1.ConfigForDomain(a.ACME.Config, d)
 		if cfg == nil || len(cfg.Domains) == 0 {
 			el = append(el, field.Required(acmeFldPath.Child("config"), errFn(d)))
 		}
@@ -93,12 +109,12 @@ func validateACMEConfigForAllDNSNames(a *v1alpha1.CertificateSpec, fldPath *fiel
 func ValidateACMECertificateConfig(a *v1alpha1.ACMECertificateConfig, fldPath *field.Path) field.ErrorList {
 	el := field.ErrorList{}
 	for i, cfg := range a.Config {
-		el = append(el, ValidateACMECertificateDomainConfig(&cfg, fldPath.Child("config").Index(i))...)
+		el = append(el, ValidateDomainSolverConfig(&cfg, fldPath.Child("config").Index(i))...)
 	}
 	return el
 }
 
-func ValidateACMECertificateDomainConfig(a *v1alpha1.ACMECertificateDomainConfig, fldPath *field.Path) field.ErrorList {
+func ValidateDomainSolverConfig(a *v1alpha1.DomainSolverConfig, fldPath *field.Path) field.ErrorList {
 	el := field.ErrorList{}
 	if len(a.Domains) == 0 {
 		el = append(el, field.Required(fldPath.Child("domains"), "at least one domain must be specified"))
@@ -106,14 +122,14 @@ func ValidateACMECertificateDomainConfig(a *v1alpha1.ACMECertificateDomainConfig
 	numTypes := 0
 	if a.DNS01 != nil {
 		numTypes++
-		el = append(el, ValidateACMECertificateDNS01Config(a.DNS01, fldPath.Child("dns01"))...)
+		el = append(el, ValidateDNS01SolverConfig(a.DNS01, fldPath.Child("dns01"))...)
 	}
 	if a.HTTP01 != nil {
 		if numTypes > 0 {
 			el = append(el, field.Forbidden(fldPath.Child("http01"), "may not specify more than one solver type"))
 		} else {
 			numTypes++
-			el = append(el, ValidateACMECertificateHTTP01Config(a.HTTP01, fldPath.Child("http01"))...)
+			el = append(el, ValidateHTTP01SolverConfig(a.HTTP01, fldPath.Child("http01"))...)
 		}
 	}
 	if numTypes == 0 {
@@ -122,7 +138,7 @@ func ValidateACMECertificateDomainConfig(a *v1alpha1.ACMECertificateDomainConfig
 	return el
 }
 
-func ValidateACMECertificateDNS01Config(a *v1alpha1.ACMECertificateDNS01Config, fldPath *field.Path) field.ErrorList {
+func ValidateDNS01SolverConfig(a *v1alpha1.DNS01SolverConfig, fldPath *field.Path) field.ErrorList {
 	el := field.ErrorList{}
 	if a.Provider == "" {
 		el = append(el, field.Required(fldPath.Child("provider"), "provider name must be set"))
@@ -130,7 +146,7 @@ func ValidateACMECertificateDNS01Config(a *v1alpha1.ACMECertificateDNS01Config, 
 	return el
 }
 
-func ValidateACMECertificateHTTP01Config(a *v1alpha1.ACMECertificateHTTP01Config, fldPath *field.Path) field.ErrorList {
+func ValidateHTTP01SolverConfig(a *v1alpha1.HTTP01SolverConfig, fldPath *field.Path) field.ErrorList {
 	el := field.ErrorList{}
 	if a.Ingress != "" && a.IngressClass != nil {
 		el = append(el, field.Forbidden(fldPath, "only one of 'ingress' and 'ingressClass' should be specified"))

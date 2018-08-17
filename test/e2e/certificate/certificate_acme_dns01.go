@@ -1,9 +1,12 @@
 /*
-Copyright 2017 Jetstack Ltd.
+Copyright 2018 The Jetstack cert-manager contributors.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -151,8 +154,8 @@ var _ = framework.CertManagerDescribe("ACME Certificate (DNS01)", func() {
 			SecretName: certificateSecretName,
 			IssuerName: issuerName,
 			DNSNames:   []string{dnsName},
-			ACMESolverConfig: v1alpha1.ACMESolverConfig{
-				DNS01: &v1alpha1.ACMECertificateDNS01Config{
+			SolverConfig: v1alpha1.SolverConfig{
+				DNS01: &v1alpha1.DNS01SolverConfig{
 					Provider: "cloudflare",
 				},
 			},
@@ -176,8 +179,8 @@ var _ = framework.CertManagerDescribe("ACME Certificate (DNS01)", func() {
 			SecretName: certificateSecretName,
 			IssuerName: issuerName,
 			DNSNames:   []string{"*." + dnsName},
-			ACMESolverConfig: v1alpha1.ACMESolverConfig{
-				DNS01: &v1alpha1.ACMECertificateDNS01Config{
+			SolverConfig: v1alpha1.SolverConfig{
+				DNS01: &v1alpha1.DNS01SolverConfig{
 					Provider: "cloudflare",
 				},
 			},
@@ -201,8 +204,8 @@ var _ = framework.CertManagerDescribe("ACME Certificate (DNS01)", func() {
 			SecretName: certificateSecretName,
 			IssuerName: issuerName,
 			DNSNames:   []string{"*." + dnsName, dnsName},
-			ACMESolverConfig: v1alpha1.ACMESolverConfig{
-				DNS01: &v1alpha1.ACMECertificateDNS01Config{
+			SolverConfig: v1alpha1.SolverConfig{
+				DNS01: &v1alpha1.DNS01SolverConfig{
 					Provider: "cloudflare",
 				},
 			},
