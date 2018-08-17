@@ -17,16 +17,11 @@ limitations under the License.
 package validation
 
 import (
-<<<<<<< HEAD
 	"strings"
 
-	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/rfc2136"
-
-=======
->>>>>>> upstream/master
-	"k8s.io/apimachinery/pkg/util/validation/field"
-
 	"github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha1"
+	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/rfc2136"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // Validation functions for cert-manager v1alpha1 Issuer types
@@ -202,6 +197,16 @@ func ValidateACMEIssuerDNS01Config(iss *v1alpha1.ACMEIssuerDNS01Config, fldPath 
 				}
 			}
 		}
+		if p.AcmeDNS != nil {
+			numProviders++
+			el = append(el, ValidateSecretKeySelector(&p.AcmeDNS.AccountSecret, fldPath.Child("acmedns", "accountSecretRef"))...)
+			if len(p.AcmeDNS.Host) == 0 {
+				el = append(el, field.Required(fldPath.Child("acmedns", "host"), ""))
+			}
+		}
+		if numProviders == 0 {
+			el = append(el, field.Required(fldPath, "at least one provider must be configured"))
+		}
 		if p.RFC2136 != nil {
 			if numProviders > 0 {
 				el = append(el, field.Forbidden(fldPath.Child("rfc2136"), "may not specify more than one provider type"))
@@ -218,16 +223,6 @@ func ValidateACMEIssuerDNS01Config(iss *v1alpha1.ACMEIssuerDNS01Config, fldPath 
 					}
 				}
 			}
-		}
-		if p.AcmeDNS != nil {
-			numProviders++
-			el = append(el, ValidateSecretKeySelector(&p.AcmeDNS.AccountSecret, fldPath.Child("acmedns", "accountSecretRef"))...)
-			if len(p.AcmeDNS.Host) == 0 {
-				el = append(el, field.Required(fldPath.Child("acmedns", "host"), ""))
-			}
-		}
-		if numProviders == 0 {
-			el = append(el, field.Required(fldPath, "at least one provider must be configured"))
 		}
 	}
 	return el

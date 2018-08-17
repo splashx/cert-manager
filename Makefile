@@ -1,3 +1,17 @@
+# Copyright 2018 The Jetstack cert-manager contributors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 PACKAGE_NAME := github.com/jetstack/cert-manager
 REGISTRY := quay.io/jetstack
 APP_NAME := cert-manager
@@ -49,7 +63,7 @@ DOCKER_BUILD_FLAGS := --build-arg VCS_REF=$(GIT_COMMIT) $(DOCKER_BUILD_FLAGS)
 ###############
 
 build: $(CMDS) docker_build
-verify: generate_verify deploy_verify hack_verify go_verify
+verify: generate_verify deploy_verify hack_verify dep_verify go_verify
 verify_pr: hack_verify_pr
 docker_build: $(DOCKER_BUILD_TARGETS)
 docker_push: $(DOCKER_PUSH_TARGETS)
@@ -67,6 +81,8 @@ generate_verify:
 # Hack targets
 ##############
 hack_verify:
+	@echo Running boilerplate header checker
+	$(HACK_DIR)/verify_boilerplate.py
 	@echo Running href checker
 	$(HACK_DIR)/verify-links.sh
 	@echo Running errexit checker
@@ -75,6 +91,8 @@ hack_verify:
 hack_verify_pr:
 	@echo Running helm chart version checker
 	$(HACK_DIR)/verify-chart-version.sh
+	@echo Running reference docs checker
+	IMAGE=eu.gcr.io/jetstack-build-infra/gen-apidocs-img $(HACK_DIR)/verify-reference-docs.sh
 
 deploy_verify:
 	@echo Running deploy-gen
@@ -82,6 +100,10 @@ deploy_verify:
 
 # Go targets
 #################
+dep_verify:
+	@echo Running dep
+	$(HACK_DIR)/verify-deps.sh
+
 go_verify: go_fmt go_test
 
 $(CMDS):
@@ -98,7 +120,8 @@ go_test:
 			grep -v '/vendor/' | \
 			grep -v '/test/e2e' | \
 			grep -v '/pkg/client' | \
-			grep -v '/third_party' \
+			grep -v '/third_party' | \
+			grep -v '/docs/generated' \
 		)
 
 go_fmt:
