@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package dns
 
 import (
@@ -8,11 +24,13 @@ import (
 
 	"github.com/jetstack/cert-manager/pkg/apis/certmanager/v1alpha1"
 	"github.com/jetstack/cert-manager/pkg/controller/test"
+	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/acmedns"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/azuredns"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/clouddns"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/cloudflare"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/rfc2136"
 	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/route53"
+	"github.com/jetstack/cert-manager/pkg/issuer/acme/dns/util"
 )
 
 const (
@@ -119,23 +137,27 @@ func newFakeDNSProviders() *fakeDNSProviders {
 		calls: []fakeDNSProviderCall{},
 	}
 	f.constructors = dnsProviderConstructors{
-		cloudDNS: func(project string, serviceAccount []byte) (*clouddns.DNSProvider, error) {
-			f.call("clouddns", project, serviceAccount)
+		cloudDNS: func(project string, serviceAccount []byte, dns01Nameservers []string) (*clouddns.DNSProvider, error) {
+			f.call("clouddns", project, serviceAccount, util.RecursiveNameservers)
 			return nil, nil
 		},
-		cloudFlare: func(email, apikey string) (*cloudflare.DNSProvider, error) {
-			f.call("cloudflare", email, apikey)
+		cloudFlare: func(email, apikey string, dns01Nameservers []string) (*cloudflare.DNSProvider, error) {
+			f.call("cloudflare", email, apikey, util.RecursiveNameservers)
 			if email == "" || apikey == "" {
 				return nil, errors.New("invalid email or apikey")
 			}
 			return nil, nil
 		},
-		route53: func(accessKey, secretKey, hostedZoneID, region string, ambient bool) (*route53.DNSProvider, error) {
-			f.call("route53", accessKey, secretKey, hostedZoneID, region, ambient)
+		route53: func(accessKey, secretKey, hostedZoneID, region string, ambient bool, dns01Nameservers []string) (*route53.DNSProvider, error) {
+			f.call("route53", accessKey, secretKey, hostedZoneID, region, ambient, util.RecursiveNameservers)
 			return nil, nil
 		},
-		azureDNS: func(clientID, clientSecret, subscriptionID, tenentID, resourceGroupName, hostedZoneName string) (*azuredns.DNSProvider, error) {
-			f.call("azuredns", clientID, clientSecret, subscriptionID, tenentID, resourceGroupName, hostedZoneName)
+		azureDNS: func(clientID, clientSecret, subscriptionID, tenentID, resourceGroupName, hostedZoneName string, dns01Nameservers []string) (*azuredns.DNSProvider, error) {
+			f.call("azuredns", clientID, clientSecret, subscriptionID, tenentID, resourceGroupName, hostedZoneName, util.RecursiveNameservers)
+			return nil, nil
+		},
+		acmeDNS: func(host string, accountJson []byte, dns01Nameservers []string) (*acmedns.DNSProvider, error) {
+			f.call("acmedns", host, accountJson, dns01Nameservers)
 			return nil, nil
 		},
 		rfc2136: func(nameserver, tsigAlgorithm, tsigKey, tsigSecret string) (*rfc2136.DNSProvider, error) {
