@@ -1,3 +1,11 @@
+// +skip_license_check
+
+/*
+This file contains portions of code directly taken from the 'xenolf/lego' project.
+A copy of the license for this code can be found in the file named LICENSE in
+this directory.
+*/
+
 // Package route53 implements a DNS provider for solving the DNS-01 challenge
 // using AWS Route 53 DNS.
 package route53
@@ -28,8 +36,9 @@ const (
 
 // DNSProvider implements the util.ChallengeProvider interface
 type DNSProvider struct {
-	client       *route53.Route53
-	hostedZoneID string
+	dns01Nameservers []string
+	client           *route53.Route53
+	hostedZoneID     string
 }
 
 // customRetryer implements the client.Retryer interface by composing the
@@ -57,7 +66,7 @@ func (d customRetryer) RetryRules(r *request.Request) time.Duration {
 // NewDNSProvider returns a DNSProvider instance configured for the AWS
 // Route 53 service using static credentials from its parameters or, if they're
 // unset and the 'ambient' option is set, credentials from the environment.
-func NewDNSProvider(accessKeyID, secretAccessKey, hostedZoneID, region string, ambient bool) (*DNSProvider, error) {
+func NewDNSProvider(accessKeyID, secretAccessKey, hostedZoneID, region string, ambient bool, dns01Nameservers []string) (*DNSProvider, error) {
 	if accessKeyID == "" && secretAccessKey == "" {
 		if !ambient {
 			return nil, fmt.Errorf("unable to construct route53 provider: empty credentials; perhaps you meant to enable ambient credentials?")
@@ -99,8 +108,9 @@ func NewDNSProvider(accessKeyID, secretAccessKey, hostedZoneID, region string, a
 	client := route53.New(sess, config)
 
 	return &DNSProvider{
-		client:       client,
-		hostedZoneID: hostedZoneID,
+		client:           client,
+		hostedZoneID:     hostedZoneID,
+		dns01Nameservers: dns01Nameservers,
 	}, nil
 }
 
@@ -112,14 +122,22 @@ func (*DNSProvider) Timeout() (timeout, interval time.Duration) {
 
 // Present creates a TXT record using the specified parameters
 func (r *DNSProvider) Present(domain, token, keyAuth string) error {
-	fqdn, value, _ := util.DNS01Record(domain, keyAuth)
+	fqdn, value, _, err := util.DNS01Record(domain, keyAuth, r.dns01Nameservers)
+	if err != nil {
+		return err
+	}
+
 	value = `"` + value + `"`
 	return r.changeRecord(route53.ChangeActionUpsert, fqdn, value, route53TTL)
 }
 
 // CleanUp removes the TXT record matching the specified parameters
 func (r *DNSProvider) CleanUp(domain, token, keyAuth string) error {
-	fqdn, value, _ := util.DNS01Record(domain, keyAuth)
+	fqdn, value, _, err := util.DNS01Record(domain, keyAuth, r.dns01Nameservers)
+	if err != nil {
+		return err
+	}
+
 	value = `"` + value + `"`
 	return r.changeRecord(route53.ChangeActionDelete, fqdn, value, route53TTL)
 }

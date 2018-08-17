@@ -1,3 +1,19 @@
+/*
+Copyright 2018 The Jetstack cert-manager contributors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package pki
 
 import (
@@ -91,11 +107,16 @@ func GenerateTemplate(issuer v1alpha1.GenericIssuer, crt *v1alpha1.Certificate, 
 		return nil, err
 	}
 
+	keyUsages := x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment
+	if crt.Spec.IsCA {
+		keyUsages |= x509.KeyUsageCertSign
+	}
 	return &x509.Certificate{
 		Version:               3,
 		BasicConstraintsValid: true,
 		SerialNumber:          serialNumber,
 		SignatureAlgorithm:    sigAlgo,
+		IsCA:                  crt.Spec.IsCA,
 		Subject: pkix.Name{
 			Organization: []string{defaultOrganization},
 			CommonName:   commonName,
@@ -103,7 +124,7 @@ func GenerateTemplate(issuer v1alpha1.GenericIssuer, crt *v1alpha1.Certificate, 
 		NotBefore: time.Now(),
 		NotAfter:  time.Now().Add(defaultNotAfter),
 		// see http://golang.org/pkg/crypto/x509/#KeyUsage
-		KeyUsage: x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		KeyUsage: keyUsages,
 		DNSNames: dnsNames,
 	}, nil
 }
@@ -131,10 +152,14 @@ func SignCertificate(template *x509.Certificate, issuerCert *x509.Certificate, p
 		return nil, nil, fmt.Errorf("error encoding certificate PEM: %s", err.Error())
 	}
 
-	// bundle the CA
-	err = pem.Encode(pemBytes, &pem.Block{Type: "CERTIFICATE", Bytes: issuerCert.Raw})
-	if err != nil {
-		return nil, nil, fmt.Errorf("error encoding issuer cetificate PEM: %s", err.Error())
+	// don't bundle the CA for selfsigned certificates
+	// TODO: better comparison method here? for now we can just compare pointers.
+	if issuerCert != template {
+		// bundle the CA
+		err = pem.Encode(pemBytes, &pem.Block{Type: "CERTIFICATE", Bytes: issuerCert.Raw})
+		if err != nil {
+			return nil, nil, fmt.Errorf("error encoding issuer cetificate PEM: %s", err.Error())
+		}
 	}
 
 	return pemBytes.Bytes(), cert, err

@@ -1,3 +1,11 @@
+// +skip_license_check
+
+/*
+This file contains portions of code directly taken from the 'xenolf/lego' project.
+A copy of the license for this code can be found in the file named LICENSE in
+this directory.
+*/
+
 package util
 
 import (
@@ -8,13 +16,16 @@ import (
 
 // DNS01Record returns a DNS record which will fulfill the `dns-01` challenge
 // TODO: move this into a non-generic place by resolving import cycle in dns package
-func DNS01Record(domain, value string) (string, string, int) {
+func DNS01Record(domain, value string, nameservers []string) (string, string, int, error) {
 	fqdn := fmt.Sprintf("_acme-challenge.%s.", domain)
 
 	// Check if the domain has CNAME then return that
-	r, err := dnsQuery(fqdn, dns.TypeCNAME, RecursiveNameservers, true)
+	r, err := dnsQuery(fqdn, dns.TypeCNAME, nameservers, true)
 	if err == nil && r.Rcode == dns.RcodeSuccess {
 		fqdn = updateDomainWithCName(r, fqdn)
 	}
-	return fqdn, value, 60
+	if err != nil {
+		return "", "", 0, err
+	}
+	return fqdn, value, 60, nil
 }
