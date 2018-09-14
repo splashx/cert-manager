@@ -41,64 +41,11 @@ var supportedAlgorithms = map[string]string{
 	"HMACSHA512": dns.HmacSHA512,
 }
 
-// Returns a slice of all the supported algorithms
-// It should contain all listed in https://tools.ietf.org/html/rfc4635#section-2
-// but miekd/dns supports only supportedAlgorithms(keys)
-func GetSupportedAlgorithms() []string {
-	keys := reflect.ValueOf(supportedAlgorithms).MapKeys()
-	strkeys := make([]string, len(keys))
-	for i := 0; i < len(keys); i++ {
-		strkeys[i] = keys[i].String()
-	}
-	sort.Strings(strkeys)
-	return strkeys
-}
-
-// This function make a valid nameserver as per RFC2136
-func ValidNameserver(nameserver string) (string, error) {
-
-	if nameserver == "" {
-		return "", fmt.Errorf("RFC2136 nameserver missing")
-	}
-
-	// SplitHostPort Behavior
-	// namserver           host                port    err
-	// 8.8.8.8             ""                  ""      missing port in address
-	// 8.8.8.8:            "8.8.8.8"           ""      <nil>
-	// 8.8.8.8.8:53        "8.8.8.8"           53      <nil>
-	// nameserver.com      ""                  ""      missing port in address
-	// nameserver.com:     "nameserver.com"    ""      <nil>
-	// nameserver.com:53   "nameserver.com"    53      <nil>
-	// :53                 ""                  53      <nil>
-	host, port, err := net.SplitHostPort(nameserver)
-
-	if err != nil {
-		if strings.Contains(err.Error(), "missing port") {
-			host = nameserver
-		}
-	}
-
-	if port == "" {
-		port = "53"
-	}
-
-	if host != "" {
-		if ipaddr := net.ParseIP(host); ipaddr == nil {
-			return "", fmt.Errorf("RFC2136 nameserver must be a valid IP Address, not %v", host)
-		}
-	} else {
-		return "", fmt.Errorf("RFC2136 nameserver has no IP Address defined, %v", nameserver)
-	}
-	return nameserver, nil
-}
-
-// DNSProvider is an implementation of the acme.ChallengeProvider interface that
-// uses dynamic DNS updates (RFC 2136) to create TXT records on a nameserver.
 type DNSProvider struct {
-	nameserver    string
-	tsigAlgorithm string
-	tsigKeyName   string
-	tsigSecret    string
+	dns01Nameservers []string
+	tsigAlgorithm    string
+	tsigKeyName      string
+	tsigSecret       string
 }
 
 // NewDNSProvider returns a DNSProvider instance configured for rfc2136
@@ -125,10 +72,10 @@ func NewDNSProviderCredentials(nameserver, tsigAlgorithm, tsigKeyName, tsigSecre
 
 	d := &DNSProvider{}
 
-	if validNameserver, err := ValidNameserver(nameserver); err != nil {
+	if validNameservers, err := ValidNameservers(nameserver); err != nil {
 		return nil, err
 	} else {
-		d.nameserver = validNameserver
+		d.dns01Nameservers = validNameservers
 	}
 
 	if len(tsigKeyName) > 0 && len(tsigSecret) > 0 {
@@ -159,7 +106,7 @@ func (r *DNSProvider) Timeout() (timeout, interval time.Duration) {
 
 // Present creates a TXT record using the specified parameters
 func (r *DNSProvider) Present(domain, token, keyAuth string) error {
-	fqdn, value, ttl, err := util.DNS01Record(domain, keyAuth, strings.Fields(r.nameserver))
+	fqdn, value, ttl, err := util.DNS01Record(domain, keyAuth, r.dns01Nameservers)
 	if err != nil {
 		return err
 	}
@@ -168,7 +115,7 @@ func (r *DNSProvider) Present(domain, token, keyAuth string) error {
 
 // CleanUp removes the TXT record matching the specified parameters
 func (r *DNSProvider) CleanUp(domain, token, keyAuth string) error {
-	fqdn, value, ttl, err := util.DNS01Record(domain, keyAuth, strings.Fields(r.nameserver))
+	fqdn, value, ttl, err := util.DNS01Record(domain, keyAuth, r.dns01Nameservers)
 	if err != nil {
 		return err
 	}
@@ -177,7 +124,7 @@ func (r *DNSProvider) CleanUp(domain, token, keyAuth string) error {
 
 func (r *DNSProvider) changeRecord(action, fqdn, value string, ttl int) error {
 	// Find the zone for the given fqdn
-	zone, err := util.FindZoneByFqdn(fqdn, []string{r.nameserver})
+	zone, err := util.FindZoneByFqdn(fqdn, r.dns01Nameservers)
 	if err != nil {
 		return err
 	}
@@ -211,14 +158,82 @@ func (r *DNSProvider) changeRecord(action, fqdn, value string, ttl int) error {
 		c.TsigSecret = map[string]string{dns.Fqdn(r.tsigKeyName): r.tsigSecret}
 	}
 
-	// Send the query
-	reply, _, err := c.Exchange(m, r.nameserver)
-	if err != nil {
-		return fmt.Errorf("DNS update failed: %v", err)
-	}
-	if reply != nil && reply.Rcode != dns.RcodeSuccess {
-		return fmt.Errorf("DNS update failed. Server replied: %s", dns.RcodeToString[reply.Rcode])
+	for _, nameserver := range r.dns01Nameservers {
+		// Send the query
+		reply, _, err := c.Exchange(m, nameserver)
+
+		if err != nil {
+			return fmt.Errorf("DNS update failed: %v", err)
+		}
+		if reply != nil && reply.Rcode != dns.RcodeSuccess {
+			return fmt.Errorf("DNS update failed: %v", dns.RcodeToString[reply.Rcode])
+		}
+		if reply != nil && reply.Rcode == dns.RcodeSuccess {
+			return nil
+		}
 	}
 
 	return nil
+}
+
+// Returns a slice of all the supported algorithms
+// It should contain all listed in https://tools.ietf.org/html/rfc4635#section-2
+// but miekd/dns supports only supportedAlgorithms(keys)
+// DNSProvider is an implementation of the acme.ChallengeProvider interface that
+// uses dynamic DNS updates (RFC 2136) to create TXT records on a nameserver.
+func GetSupportedAlgorithms() []string {
+	keys := reflect.ValueOf(supportedAlgorithms).MapKeys()
+	strkeys := make([]string, len(keys))
+	for i := 0; i < len(keys); i++ {
+		strkeys[i] = keys[i].String()
+	}
+	sort.Strings(strkeys)
+	return strkeys
+}
+
+// This function make a valid nameserver as per RFC2136
+func ValidNameservers(nameserver string) ([]string, error) {
+
+	if len(nameserver) <= 0 {
+		return []string{""}, fmt.Errorf("RFC2136 nameserver missing")
+	}
+
+	nameservers := strings.Split(nameserver, ",")
+
+	for i, element := range nameservers {
+		element = strings.TrimSpace(element)
+
+		// SplitHostPort Behavior
+		// namserver           host                port    err
+		// 8.8.8.8             ""                  ""      missing port in address
+		// 8.8.8.8:            "8.8.8.8"           ""      <nil>
+		// 8.8.8.8.8:53        "8.8.8.8"           53      <nil>
+		// nameserver.com      ""                  ""      missing port in address
+		// nameserver.com:     "nameserver.com"    ""      <nil>
+		// nameserver.com:53   "nameserver.com"    53      <nil>
+		// :53                 ""                  53      <nil>
+		host, port, err := net.SplitHostPort(element)
+
+		if err != nil {
+			if strings.Contains(err.Error(), "missing port") {
+				host = element
+			}
+		}
+
+		if port == "" {
+			port = "53"
+		}
+
+		if host != "" {
+			if ipaddr := net.ParseIP(host); ipaddr == nil {
+				return []string{""}, fmt.Errorf("RFC2136 nameserver must be a valid IP Address, not %v", host)
+			}
+		} else {
+			return []string{""}, fmt.Errorf("RFC2136 nameserver has no IP Address defined, %v", element)
+		}
+
+		nameservers[i] = host + ":" + port
+	}
+
+	return nameservers, nil
 }

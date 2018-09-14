@@ -215,8 +215,8 @@ func ValidateACMEIssuerDNS01Config(iss *v1alpha1.ACMEIssuerDNS01Config, fldPath 
 				if len(p.RFC2136.Nameserver) == 0 {
 					el = append(el, field.Required(fldPath.Child("rfc2136", "nameserver"), ""))
 				} else {
-					if _, err := rfc2136.ValidNameserver(p.RFC2136.Nameserver); err != nil {
-						el = append(el, field.Invalid(fldPath.Child("rfc2136", "nameserver"), "", "Nameserver invalid. Check the documentation for details."))
+					if _, err := rfc2136.ValidNameservers(p.RFC2136.Nameserver); err != nil {
+						el = append(el, field.Invalid(fldPath.Child("rfc2136", "nameserver"), "", err.Error()))
 					}
 				}
 				if len(p.RFC2136.TSIGAlgorithm) > 0 {

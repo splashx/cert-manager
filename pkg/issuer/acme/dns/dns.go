@@ -282,7 +282,7 @@ func (s *Solver) solverForIssuerProvider(issuer v1alpha1.GenericIssuer, provider
 		}
 
 		impl, err = s.dnsProviderConstructors.rfc2136(
-			providerConfig.RFC2136.Nameserver,
+			string(providerConfig.RFC2136.Nameserver),
 			string(providerConfig.RFC2136.TSIGAlgorithm),
 			providerConfig.RFC2136.TSIGKeyName,
 			secret,

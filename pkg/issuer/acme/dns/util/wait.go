@@ -124,6 +124,34 @@ func checkAuthoritativeNss(fqdn, value string, nameservers []string) (bool, erro
 	return true, nil
 }
 
+func DnsQuery(fqdn string, rtype uint16, nameservers []string, recursive bool) (in *dns.Msg, err error) {
+	m := new(dns.Msg)
+	m.SetQuestion(fqdn, rtype)
+	m.SetEdns0(4096, false)
+
+	if !recursive {
+		m.RecursionDesired = false
+	}
+
+	// Will retry the request based on the number of servers (n+1)
+	for i := 1; i <= len(nameservers)+1; i++ {
+		ns := nameservers[i%len(nameservers)]
+		udp := &dns.Client{Net: "udp", Timeout: DNSTimeout}
+		in, _, err = udp.Exchange(m, ns)
+
+		if err == dns.ErrTruncated {
+			tcp := &dns.Client{Net: "tcp", Timeout: DNSTimeout}
+			// If the TCP request succeeds, the err will reset to nil
+			in, _, err = tcp.Exchange(m, ns)
+		}
+
+		if err == nil {
+			break
+		}
+	}
+	return
+}
+
 // dnsQuery will query a nameserver, iterating through the supplied servers as it retries
 // The nameserver should include a port, to facilitate testing where we talk to a mock dns server.
 func dnsQuery(fqdn string, rtype uint16, nameservers []string, recursive bool) (in *dns.Msg, err error) {

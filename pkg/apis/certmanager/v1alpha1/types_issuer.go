@@ -210,7 +210,9 @@ type ACMEIssuerDNS01ProviderAcmeDNS struct {
 // ACMEIssuerDNS01ProviderRFC2136 is a structure containing the
 // configuration for RFC2136 DNS
 type ACMEIssuerDNS01ProviderRFC2136 struct {
-	// The IP address of the DNS supporting RFC2136. Required.
+	// The IP address of the DNS server(s) supporting RFC2136. Required.
+	// Comma Separated values are supported - the provider will stop after
+	// the first successful TXT update
 	// Note: FQDN is not a valid value, only IP.
 	Nameserver string `json:"nameserver"`
 

@@ -22,6 +22,7 @@ limitations under the License.
 package rfc2136
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"strings"
@@ -33,6 +34,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var reqChan = make(chan *dns.Msg, 10)
+
 var (
 	rfc2136TestDomain      = "123456789.www.example.com"
 	rfc2136TestKeyAuth     = "123d=="
@@ -43,8 +46,6 @@ var (
 	rfc2136TestTTL         = 60
 	rfc2136TestTsigSecret  = "IwBTJx9wrDp4Y1RyC3H0gA=="
 )
-
-var reqChan = make(chan *dns.Msg, 10)
 
 func TestRFC2136CanaryLocalTestServer(t *testing.T) {
 	dns.HandleFunc("example.com.", serverHandlerHello)
@@ -94,6 +95,7 @@ func TestRFC2136ServerError(t *testing.T) {
 	defer dns.HandleRemove(rfc2136TestZone)
 
 	server, addrstr, err := runLocalDNSTestServer("127.0.0.1:0", false)
+
 	if err != nil {
 		t.Fatalf("Failed to start test server: %v", err)
 	}
@@ -130,17 +132,17 @@ func TestRFC2136TsigClient(t *testing.T) {
 }
 
 func TestRFC2136InvalidNameserverFQDN(t *testing.T) {
-	_, err := NewDNSProviderCredentials("nameserver.com", "", rfc2136TestTsigKeyName, rfc2136TestTsigSecret)
+	_, err := NewDNSProviderCredentials("example.com", "", rfc2136TestTsigKeyName, rfc2136TestTsigSecret)
 	assert.Error(t, err)
 }
 
 func TestRFC2136InvalidNameserverFQDNWithPort(t *testing.T) {
-	_, err := NewDNSProviderCredentials("nameserver.com:53", "", rfc2136TestTsigKeyName, rfc2136TestTsigSecret)
+	_, err := NewDNSProviderCredentials("example.com:53", "", rfc2136TestTsigKeyName, rfc2136TestTsigSecret)
 	assert.Error(t, err)
 }
 
 func TestRFC2136InvalidNameserverFQDNWithPort2(t *testing.T) {
-	_, err := NewDNSProviderCredentials("nameserver.com:", "", rfc2136TestTsigKeyName, rfc2136TestTsigSecret)
+	_, err := NewDNSProviderCredentials("example.com:", "", rfc2136TestTsigKeyName, rfc2136TestTsigSecret)
 	assert.Error(t, err)
 }
 
@@ -178,6 +180,12 @@ func TestRFC2136NamserverIPInvalid2(t *testing.T) {
 	_, err := NewDNSProviderCredentials(":", "", rfc2136TestTsigKeyName, rfc2136TestTsigSecret)
 	assert.Error(t, err)
 }
+
+func TestRFC2136MultipleNameservers(t *testing.T) {
+	_, err := NewDNSProviderCredentials("127.0.0.1, 127.0.0.2", "", rfc2136TestTsigKeyName, rfc2136TestTsigSecret)
+	assert.NoError(t, err)
+}
+
 func TestRFC2136DefaultTSIGAlgorithm(t *testing.T) {
 	provider, err := NewDNSProviderCredentials("127.0.0.1:0", "", rfc2136TestTsigKeyName, rfc2136TestTsigSecret)
 	if err != nil {
@@ -191,6 +199,7 @@ func TestRFC2136InvalidTSIGAlgorithm(t *testing.T) {
 }
 
 func TestRFC2136ValidUpdatePacket(t *testing.T) {
+
 	dns.HandleFunc(rfc2136TestZone, serverHandlerPassBackRequest)
 	defer dns.HandleRemove(rfc2136TestZone)
 
@@ -202,17 +211,24 @@ func TestRFC2136ValidUpdatePacket(t *testing.T) {
 
 	txtRR, _ := dns.NewRR(fmt.Sprintf("%s %d IN TXT %s", rfc2136TestFqdn, rfc2136TestTTL, rfc2136TestValue))
 	rrs := []dns.RR{txtRR}
+
 	m := new(dns.Msg)
 	m.SetUpdate(rfc2136TestZone)
 	m.RemoveRRset(rrs)
 	m.Insert(rrs)
-	//expectstr := m.String()
-	//expect, err := m.Pack()
+
+	expectstr := m.String()
+	expect, err := m.Pack()
+
+	// send message
+	reqChan <- m
+
 	if err != nil {
-		t.Fatalf("Error packing expect msg: %v", err)
+		t.Fatalf("Error packing expect msg: %v \n", err)
 	}
 
 	provider, err := NewDNSProviderCredentials(addrstr, "", "", "")
+
 	if err != nil {
 		t.Fatalf("Expected NewDNSProviderCredentials() to return no error but the error was -> %v", err)
 	}
@@ -222,21 +238,21 @@ func TestRFC2136ValidUpdatePacket(t *testing.T) {
 	}
 
 	assert.NoError(t, err)
-	//rcvMsg := <-reqChan
-	//rcvMsg.Id = m.Id
-	//actual, err := rcvMsg.Pack()
-	//if err != nil {
-	//	t.Fatalf("Error packing actual msg: %v", err)
-	//}
+	rcvMsg := <-reqChan
+	rcvMsg.Id = m.Id
+	actual, err := rcvMsg.Pack()
+	if err != nil {
+		t.Fatalf("Error packing actual msg: %v", err)
+	}
 
-	//if !bytes.Equal(actual, expect) {
-	//	tmp := new(dns.Msg)
-	//	if err := tmp.Unpack(actual); err != nil {
-	//		t.Fatalf("Error unpacking actual msg: %v", err)
-	//	}
-	//	t.Errorf("Expected msg:\n%s", expectstr)
-	//	t.Errorf("Actual msg:\n%v", tmp)
-	//}
+	if !bytes.Equal(actual, expect) {
+		tmp := new(dns.Msg)
+		if err := tmp.Unpack(actual); err != nil {
+			t.Fatalf("Error unpacking actual msg: %v", err)
+		}
+		t.Errorf("Expected msg:\n%s", expectstr)
+		t.Errorf("Actual msg:\n%v", tmp)
+	}
 }
 
 func runLocalDNSTestServer(listenAddr string, tsig bool) (*dns.Server, string, error) {
@@ -305,8 +321,8 @@ func serverHandlerPassBackRequest(w dns.ResponseWriter, req *dns.Msg) {
 		// Return SOA to appease findZoneByFqdn()
 		soaRR, _ := dns.NewRR(fmt.Sprintf("%s %d IN SOA ns1.%s admin.%s 2016022801 28800 7200 2419200 1200", rfc2136TestZone, rfc2136TestTTL, rfc2136TestZone, rfc2136TestZone))
 		m.Answer = []dns.RR{soaRR}
-	}
 
+	}
 	if t := req.IsTsig(); t != nil {
 		if w.TsigStatus() == nil {
 			// Validated
